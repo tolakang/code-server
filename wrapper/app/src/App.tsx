@@ -15,6 +15,7 @@ import AIAssistant from './components/AIAssistant';
 import MCPServer from './components/MCPServer';
 import Notifications from './components/Notifications';
 import AuditLogs from './components/AuditLogs';
+import Users from './components/Users';
 
 function App() {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ function App() {
             <Route path="/explorer" element={<Explorer />} />
             <Route path="/teams" element={<Teams />} />
             <Route path="/audit-logs" element={<AuditLogs />} />
+            <Route path="/users" element={<Users />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Box>
@@ -57,6 +59,9 @@ function App() {
               case 'teams':
                 path = '/teams';
                 break;
+              case 'users':
+                path = '/users';
+                break;
               default:
                 path = '/dashboard';
             }
@@ -69,6 +74,7 @@ function App() {
           <BottomNavigationAction label="Terminal" icon={<TerminalIcon />} value="terminal" />
           <BottomNavigationAction label="Explorer" icon={<FolderIcon />} value="explorer" />
           <BottomNavigationAction label="Teams" icon={<GroupIcon />} value="teams" />
+          <BottomNavigationAction label="Users" icon={<GroupIcon />} value="users" />
         </BottomNavigation>
       </Box>
     </>
