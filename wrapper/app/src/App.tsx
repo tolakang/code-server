@@ -10,6 +10,7 @@ import Editor from './pages/Editor';
 import Terminal from './pages/Terminal';
 import Explorer from './pages/Explorer';
 import AIAssistant from './components/AIAssistant';
+import MCPServer from './components/MCPServer';
 
 function App() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ function App() {
   return (
     <>
       <AIAssistant />
+      <MCPServer />
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Box flex={1} overflow="auto">
           <Routes>
