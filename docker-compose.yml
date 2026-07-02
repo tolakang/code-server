@@ -36,6 +36,35 @@ services:
     depends_on:
       - redis
       - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mobile-code-server.rule=Host(`code.yourdomain.com`)"
+      - "traefik.http.routers.mobile-code-server.entrypoints=websecure"
+      - "traefik.http.routers.mobile-code-server.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mobile-code-server.loadbalancer.server.port=8080"
+
+  # Traefik - Reverse Proxy and Load Balancer
+  traefik:
+    image: traefik:v2.10
+    container_name: mobile-code-server-traefik
+    command:
+      - --api.insecure=true
+      - --providers.docker
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.email=admin@yourdomain.com
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/letsencrypt
+    restart: unless-stopped
+    networks:
+      - mobile-code-server-net
 
   # Redis - For sessions and real-time features
   redis:
@@ -87,27 +116,12 @@ services:
       - mobile-code-server-net
     profiles:
       - mcp
-
-  # Nginx - Reverse Proxy and Load Balancer
-  nginx:
-    image: nginx:alpine
-    container_name: mobile-code-server-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
-    depends_on:
-      - mobile-code-server
-    restart: unless-stopped
-    networks:
-      - mobile-code-server-net
-    healthcheck:
-      test: ["CMD", "nginx", "-t"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mcp-server.rule=Host(`mcp.yourdomain.com`)"
+      - "traefik.http.routers.mcp-server.entrypoints=websecure"
+      - "traefik.http.routers.mcp-server.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mcp-server.loadbalancer.server.port=8082"
 
   # Code Server - The actual VS Code server
   code-server:
@@ -146,6 +160,12 @@ services:
       - mobile-code-server-net
     profiles:
       - admin
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin-panel.rule=Host(`admin.yourdomain.com`)"
+      - "traefik.http.routers.admin-panel.entrypoints=websecure"
+      - "traefik.http.routers.admin-panel.tls.certresolver=letsencrypt"
+      - "traefik.http.services.admin-panel.loadbalancer.server.port=3001"
 
   # File Upload Service
   file-upload:
@@ -166,6 +186,12 @@ services:
       - mobile-code-server-net
     profiles:
       - file-upload
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.file-upload.rule=Host(`upload.yourdomain.com`)"
+      - "traefik.http.routers.file-upload.entrypoints=websecure"
+      - "traefik.http.routers.file-upload.tls.certresolver=letsencrypt"
+      - "traefik.http.services.file-upload.loadbalancer.server.port=3002"
 
 # Volumes for persistent data
 volumes:

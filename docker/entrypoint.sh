@@ -1,12 +1,11 @@
 #!/bin/bash
 set -e
 
-# Start nginx in the background
-nginx -g 'daemon off;' &
+# Start code-server in the background
+/usr/bin/entrypoint.sh "$@" &
 
-# Wait a moment for nginx to start
-sleep 2
+# Wait a moment for code-server to start
+sleep 5
 
-# Execute the original code-server entrypoint with the arguments passed to this script
-# The original entrypoint is at /usr/bin/entrypoint.sh in the base image
-exec /usr/bin/entrypoint.sh "$@"
+# Keep the container running
+tail -f /dev/null

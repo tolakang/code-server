@@ -18,17 +18,16 @@ FROM codercom/code-server:latest
 ENV HOME=/home/coder
 WORKDIR $HOME
 
-# Install nginx and dependencies
+# Install dependencies for code-server
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        nginx \
+        ca-certificates \
+        curl \
+        git \
         && rm -rf /var/lib/apt/lists/*
 
 # Copy built React app from builder stage
 COPY --from=builder /home/coder/app/dist /var/www/html
-
-# Copy custom nginx configuration
-COPY docker/nginx.conf /etc/nginx/nginx.conf
 
 # Copy custom entrypoint script
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -41,7 +40,7 @@ RUN mkdir -p \
     $HOME/project \
     && chown -R coder:coder $HOME
 
-# Expose port (nginx will listen on 8080)
+# Expose port (Traefik will route traffic)
 EXPOSE 8080
 
 # Switch to coder user
