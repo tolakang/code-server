@@ -5,6 +5,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import EditIcon from '@mui/icons-material/Edit';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import FolderIcon from '@mui/icons-material/Folder';
+import GroupIcon from '@mui/icons-material/Group';
 import Dashboard from './pages/Dashboard';
 import Editor from './pages/Editor';
 import Terminal from './pages/Terminal';
@@ -13,6 +14,7 @@ import Teams from './components/Teams';
 import AIAssistant from './components/AIAssistant';
 import MCPServer from './components/MCPServer';
 import Notifications from './components/Notifications';
+import AuditLogs from './components/AuditLogs';
 
 function App() {
   const navigate = useNavigate();
@@ -30,6 +32,7 @@ function App() {
             <Route path="/terminal" element={<Terminal />} />
             <Route path="/explorer" element={<Explorer />} />
             <Route path="/teams" element={<Teams />} />
+            <Route path="/audit-logs" element={<AuditLogs />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Box>
