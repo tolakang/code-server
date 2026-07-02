@@ -9,8 +9,10 @@ import Dashboard from './pages/Dashboard';
 import Editor from './pages/Editor';
 import Terminal from './pages/Terminal';
 import Explorer from './pages/Explorer';
+import Teams from './components/Teams';
 import AIAssistant from './components/AIAssistant';
 import MCPServer from './components/MCPServer';
+import Notifications from './components/Notifications';
 
 function App() {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ function App() {
     <>
       <AIAssistant />
       <MCPServer />
+      <Notifications />
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Box flex={1} overflow="auto">
           <Routes>
@@ -26,6 +29,7 @@ function App() {
             <Route path="/editor" element={<Editor />} />
             <Route path="/terminal" element={<Terminal />} />
             <Route path="/explorer" element={<Explorer />} />
+            <Route path="/teams" element={<Teams />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Box>
@@ -47,6 +51,9 @@ function App() {
               case 'explorer':
                 path = '/explorer';
                 break;
+              case 'teams':
+                path = '/teams';
+                break;
               default:
                 path = '/dashboard';
             }
@@ -58,6 +65,7 @@ function App() {
           <BottomNavigationAction label="Editor" icon={<EditIcon />} value="editor" />
           <BottomNavigationAction label="Terminal" icon={<TerminalIcon />} value="terminal" />
           <BottomNavigationAction label="Explorer" icon={<FolderIcon />} value="explorer" />
+          <BottomNavigationAction label="Teams" icon={<GroupIcon />} value="teams" />
         </BottomNavigation>
       </Box>
     </>
