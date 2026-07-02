@@ -18,10 +18,11 @@ FROM codercom/code-server:latest
 ENV HOME=/home/coder
 WORKDIR $HOME
 
-# Install nginx
+# Install nginx and dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends nginx && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        nginx \
+        && rm -rf /var/lib/apt/lists/*
 
 # Copy built React app from builder stage
 COPY --from=builder /home/coder/app/dist /var/www/html
