@@ -4,10 +4,12 @@
 # Builder stage for the React app
 FROM node:20 AS builder
 WORKDIR /home/coder
+
+# Copy the wrapper directory (excluding node_modules)
 COPY wrapper/app/package*.json ./
 RUN npm ci
-COPY wrapper/app/ .
-RUN npm run build
+COPY wrapper/app/ ./app/
+RUN npm run build --prefix ./app
 
 # Final stage
 FROM codercom/code-server:latest
@@ -22,7 +24,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy built React app from builder stage
-COPY --from=builder /home/coder/dist /var/www/html
+COPY --from=builder /home/coder/app/dist /var/www/html
 
 # Copy custom nginx configuration
 COPY docker/nginx.conf /etc/nginx/nginx.conf
