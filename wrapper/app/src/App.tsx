@@ -9,13 +9,14 @@ import Dashboard from './pages/Dashboard';
 import Editor from './pages/Editor';
 import Terminal from './pages/Terminal';
 import Explorer from './pages/Explorer';
-import { AuthProvider } from './hooks/useAuth';
+import AIAssistant from './components/AIAssistant';
 
 function App() {
   const navigate = useNavigate();
 
   return (
-    <AuthProvider>
+    <>
+      <AIAssistant />
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Box flex={1} overflow="auto">
           <Routes>
@@ -57,7 +58,7 @@ function App() {
           <BottomNavigationAction label="Explorer" icon={<FolderIcon />} value="explorer" />
         </BottomNavigation>
       </Box>
-    </AuthProvider>
+    </>
   );
 }
 
