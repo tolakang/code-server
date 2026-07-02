@@ -1,18 +1,66 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, IconButton } from '@mui/material';
+import FolderIcon from '@mui/icons-material/Folder';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 
-const Explorer = () => {
+const FileBrowser = () => {
+  const [files, setFiles] = useState([]);
+  const [currentPath, setCurrentPath] = useState('/');
+
+  useEffect(() => {
+    // Fetch files from code-server API
+    const fetchFiles = async () => {
+      try {
+        const response = await fetch(`/api/files?path=${encodeURIComponent(currentPath)}`);
+        const data = await response.json();
+        setFiles(data);
+      } catch (error) {
+        console.error('Error fetching files:', error);
+      }
+    };
+
+    fetchFiles();
+  }, [currentPath]);
+
+  const handleFileClick = (file) => {
+    if (file.type === 'directory') {
+      setCurrentPath(`${currentPath}${file.name}/`);
+    } else {
+      // Handle file click (e.g., open in editor)
+      console.log('File clicked:', file.name);
+    }
+  };
+
+  const handleBack = () => {
+    const pathParts = currentPath.split('/').filter(part => part !== '');
+    if (pathParts.length > 0) {
+      pathParts.pop();
+      setCurrentPath(`/${pathParts.join('/')}/`);
+    }
+  };
+
   return (
-    <div style={{ padding: '16px' }}>
-      <h1>File Explorer</h1>
-      <p>This is where the file explorer will be displayed.</p>
-      <div style={{ border: '1px solid #ccc', minHeight: '200px', marginTop: '16px' }}>
-        {/* Placeholder for file tree */}
-        <div style={{ padding: '8px', color: '#666' }}>
-          File Explorer Placeholder
-        </div>
-      </div>
-    </div>
+    <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', padding: '8px', backgroundColor: '#f5f5f5' }}>
+        <Typography variant="h6">File Browser</Typography>
+        {currentPath !== '/' && (
+          <IconButton onClick={handleBack} sx={{ marginLeft: 'auto' }}>
+            <FolderIcon />
+          </IconButton>
+        )}
+      </Box>
+      <List>
+        {files.map((file) => (
+          <ListItem button key={file.name} onClick={() => handleFileClick(file)}>
+            <ListItemIcon>
+              {file.type === 'directory' ? <FolderIcon /> : <InsertDriveFileIcon />}
+            </ListItemIcon>
+            <ListItemText primary={file.name} />
+          </ListItem>
+        ))}
+      </List>
+    </Box>
   );
 };
 
-export default Explorer;
+export default FileBrowser;

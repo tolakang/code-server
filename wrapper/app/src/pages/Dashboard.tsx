@@ -1,24 +1,47 @@
 import React from 'react';
+import { Box, Typography, Button, List, ListItem, ListItemText, Divider } from '@mui/material';
 
-const Dashboard = () => {
+const WorkspaceManager = () => {
+  const [workspaces, setWorkspaces] = React.useState([
+    { id: '1', name: 'Default Workspace', path: '/project' },
+    { id: '2', name: 'Mobile Development', path: '/project/mobile' },
+  ]);
+
+  const handleCreateWorkspace = () => {
+    // TODO: Implement workspace creation
+    console.log('Create new workspace');
+  };
+
+  const handleWorkspaceClick = (workspace) => {
+    // TODO: Switch to workspace
+    console.log('Switch to workspace:', workspace.name);
+  };
+
   return (
-    <div style={{ padding: '16px' }}>
-      <h1>Welcome to Mobile Code Server</h1>
-      <div style={{ margin: '16px 0' }}>
-        <h2>Quick Start</h2>
-        <button style={{ margin: '8px 0', padding: '8px 16px' }}>
-          Open Editor
-        </button>
-        <button style={{ margin: '8px 0', padding: '8px 16px' }}>
-          Explore Files
-        </button>
-      </div>
-      <p>
-        Your mobile-first development environment is ready.
-        Use the bottom navigation to switch between editor, terminal, and file explorer.
-      </p>
-    </div>
+    <Box sx={{ padding: '16px' }}>
+      <Typography variant="h5" gutterBottom>
+        Workspace Manager
+      </Typography>
+
+      <Button variant="contained" onClick={handleCreateWorkspace} sx={{ mb: 2 }}>
+        Create New Workspace
+      </Button>
+
+      <Divider sx={{ my: 2 }} />
+
+      <Typography variant="h6" gutterBottom>
+        Available Workspaces
+      </Typography>
+
+      <List>
+        {workspaces.map((workspace) => (
+          <ListItem button key={workspace.id} onClick={() => handleWorkspaceClick(workspace)}>
+            <ListItemText primary={workspace.name} secondary={workspace.path} />
+          </ListItem>
+        ))}
+      </List>
+    </Box>
   );
 };
 
-export default Dashboard;
+export default WorkspaceManager;
