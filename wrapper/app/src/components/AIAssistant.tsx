@@ -1,35 +1,83 @@
-import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, IconButton, List, ListItem, ListItemText } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, TextField, Button, IconButton, List, ListItem, ListItemText, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import SendIcon from '@mui/icons-material/Send';
 import CloseIcon from '@mui/icons-material/Close';
+import { sendToOpenCode, sendToClaude, sendToCodex, sendToGemini, sendToOpenRouter, getAvailableModels } from '../api/aiApi';
 
 const AIAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([{
     text: 'Hello! I am your AI assistant. How can I help you with your code?',
     isUser: false,
+    model: 'system'
   }]);
   const [input, setInput] = useState('');
+  const [selectedModel, setSelectedModel] = useState('opencode');
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const models = await getAvailableModels();
+        setAvailableModels(models);
+      } catch (error) {
+        console.error('Error fetching available models:', error);
+      }
+    };
+    fetchModels();
+  }, []);
 
   const toggleAssistant = () => {
     setIsOpen(!isOpen);
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (input.trim() === '') return;
 
     // Add user message
-    setMessages(prev => [...prev, { text: input, isUser: true }]);
+    setMessages(prev => [...prev, { text: input, isUser: true, model: selectedModel }]);
     setInput('');
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      let response;
+      switch (selectedModel) {
+        case 'opencode':
+          response = await sendToOpenCode(input);
+          break;
+        case 'claude':
+          response = await sendToClaude(input);
+          break;
+        case 'codex':
+          response = await sendToCodex(input);
+          break;
+        case 'gemini':
+          response = await sendToGemini(input);
+          break;
+        default:
+          response = await sendToOpenRouter(input, selectedModel);
+      }
+
+      // Add AI response
       setMessages(prev => [...prev, {
-        text: `I received your message: ${input}. This is a simulated AI response.`,
+        text: response.response,
         isUser: false,
+        model: response.model
       }]);
-    }, 500);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setMessages(prev => [...prev, {
+        text: 'Sorry, there was an error processing your request.',
+        isUser: false,
+        model: 'error'
+      }]);
+    }
+  };
+
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      sendMessage();
+    }
   };
 
   return (
@@ -47,6 +95,25 @@ const AIAssistant = () => {
             </IconButton>
           </Box>
 
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id="model-select-label">AI Model</InputLabel>
+            <Select
+              labelId="model-select-label"
+              id="model-select"
+              value={selectedModel}
+              label="AI Model"
+              onChange={(e) => setSelectedModel(e.target.value as string)}
+            >
+              <MenuItem value="opencode">OpenCode</MenuItem>
+              <MenuItem value="claude">Claude Code</MenuItem>
+              <MenuItem value="codex">Codex</MenuItem>
+              <MenuItem value="gemini">Gemini</MenuItem>
+              {availableModels.filter(model => !['opencode', 'claude', 'codex', 'gemini'].includes(model)).map(model => (
+                <MenuItem key={model} value={model}>{model}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           <Box sx={{ height: 300, overflowY: 'auto', mb: 2 }}>
             <List>
               {messages.map((message, index) => (
@@ -57,6 +124,9 @@ const AIAssistant = () => {
                     </Box>
                   ) : (
                     <Box sx={{ backgroundColor: '#f0f0f0', borderRadius: 8, padding: '8px 12px', maxWidth: '80%' }}>
+                      <Typography variant="caption" sx={{ display: 'block', fontSize: '0.7rem', color: 'text.secondary' }}>
+                        {message.model}
+                      </Typography>
                       {message.text}
                     </Box>
                   )}
@@ -70,6 +140,7 @@ const AIAssistant = () => {
               fullWidth
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
               placeholder="Type your message..."
               variant="outlined"
               sx={{ mr: 1, mb: 1 }}
