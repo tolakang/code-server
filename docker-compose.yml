@@ -16,8 +16,6 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - PORT=8080
-      - CODE_SERVER_INTERNAL_PORT=3000
     restart: unless-stopped
     networks:
       - mobile-code-server-net

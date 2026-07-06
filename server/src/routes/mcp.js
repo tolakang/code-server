@@ -5,7 +5,7 @@ const router = express.Router();
 let mcpConnected = false;
 let mcpConfig = {
   host: process.env.MCP_SERVER_HOST || 'localhost',
-  port: parseInt(process.env.MCP_SERVER_PORT || '8082'),
+  port: parseInt(process.env.MCP_SERVER_PORT || '8083'),
 };
 
 // GET /api/mcp/status - Get MCP server status
