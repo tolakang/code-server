@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Start backend server in background
+cd /home/coder/server
+node src/index.js &
+
+# Wait for backend to start
+sleep 2
+
 # Start nginx in background
 nginx
 

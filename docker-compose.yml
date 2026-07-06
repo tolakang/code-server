@@ -10,76 +10,34 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./project:/home/coder/project:cached
-      - ./data:/home/coder/.local/share/code-server:cached
-      - ./config:/home/coder/.config/code-server:cached
-      - ./workspace:/home/coder/workspace:cached
+      - project-data:/home/coder/project
+      - code-server-data:/home/coder/.local/share/code-server
+      - code-server-config:/home/coder/.config/code-server
     environment:
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-mobile_code_server}
       - AUTH_TYPE=${AUTH_TYPE:-none}
-      - CODE_SERVER_AUTH=${CODE_SERVER_AUTH:-none}
-      - CODE_SERVER_HOST=127.0.0.1
-      - CODE_SERVER_PORT=8081
-      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key_here}
-      - SESSION_SECRET=${SESSION_SECRET:-your_session_secret_key_here}
+      - JWT_SECRET=${JWT_SECRET:-change_me_to_a_random_string}
+      - SESSION_SECRET=${SESSION_SECRET:-change_me_to_a_random_string}
       - AI_PROVIDER=${AI_PROVIDER:-opencode}
       - MCP_SERVER_ENABLED=${MCP_SERVER_ENABLED:-true}
       - MCP_SERVER_HOST=${MCP_SERVER_HOST:-localhost}
       - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8082}
-      - FILE_UPLOAD_SIZE_LIMIT=${FILE_UPLOAD_SIZE_LIMIT:-10485760}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     restart: unless-stopped
-    networks:
-      - mobile-code-server-net
     depends_on:
-      - redis
-      - postgres
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mobile-code-server.rule=Host(`code.yourdomain.com`)"
-      - "traefik.http.routers.mobile-code-server.entrypoints=websecure"
-      - "traefik.http.routers.mobile-code-server.tls.certresolver=letsencrypt"
-      - "traefik.http.services.mobile-code-server.loadbalancer.server.port=8080"
-
-  # Traefik - Reverse Proxy and Load Balancer
-  traefik:
-    image: traefik:v2.10
-    container_name: mobile-code-server-traefik
-    command:
-      - --api.insecure=true
-      - --providers.docker
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.email=admin@yourdomain.com
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./certs:/letsencrypt
-    restart: unless-stopped
+      postgres:
+        condition: service_healthy
     networks:
       - mobile-code-server-net
 
-  # Redis - For sessions and real-time features
-  redis:
-    image: redis:alpine
-    container_name: mobile-code-server-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    networks:
-      - mobile-code-server-net
-    command: redis-server --requirepass ${REDIS_PASSWORD:-}
-
-  # PostgreSQL - For persistent data
+  # PostgreSQL - Database
   postgres:
     image: postgres:15-alpine
     container_name: mobile-code-server-postgres
@@ -100,102 +58,13 @@ services:
       timeout: 5s
       retries: 5
 
-  # MCP Server - Model Context Protocol Server
-  mcp-server:
-    image: mcp-server:latest
-    container_name: mobile-code-server-mcp
-    ports:
-      - "8082:8082"
-    volumes:
-      - ./mcp:/app/mcp
-    environment:
-      - MCP_HOST=0.0.0.0
-      - MCP_PORT=8082
-    restart: unless-stopped
-    networks:
-      - mobile-code-server-net
-    profiles:
-      - mcp
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mcp-server.rule=Host(`mcp.yourdomain.com`)"
-      - "traefik.http.routers.mcp-server.entrypoints=websecure"
-      - "traefik.http.routers.mcp-server.tls.certresolver=letsencrypt"
-      - "traefik.http.services.mcp-server.loadbalancer.server.port=8082"
-
-  # Code Server - The actual VS Code server
-  code-server:
-    image: codercom/code-server:latest
-    container_name: mobile-code-server-code-server
-    ports:
-      - "8081:8081"
-    volumes:
-      - ./project:/home/coder/project:cached
-      - ./data:/home/coder/.local/share/code-server:cached
-      - ./config:/home/coder/.config/code-server:cached
-    environment:
-      - PASSWORD=${CODE_SERVER_PASSWORD:-}
-      - SUDO_PASSWORD=${CODE_SERVER_SUDO_PASSWORD:-}
-      - AUTH_TYPE=${CODE_SERVER_AUTH:-none}
-      - DISABLE_TELEMETRY=true
-    restart: unless-stopped
-    networks:
-      - mobile-code-server-net
-
-  # Admin Panel - For managing the application
-  admin-panel:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.admin
-    container_name: mobile-code-server-admin
-    ports:
-      - "3001:3001"
-    environment:
-      - NODE_ENV=production
-      - API_URL=http://mobile-code-server:8080
-    depends_on:
-      - mobile-code-server
-    restart: unless-stopped
-    networks:
-      - mobile-code-server-net
-    profiles:
-      - admin
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.admin-panel.rule=Host(`admin.yourdomain.com`)"
-      - "traefik.http.routers.admin-panel.entrypoints=websecure"
-      - "traefik.http.routers.admin-panel.tls.certresolver=letsencrypt"
-      - "traefik.http.services.admin-panel.loadbalancer.server.port=3001"
-
-  # File Upload Service
-  file-upload:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.file-upload
-    container_name: mobile-code-server-file-upload
-    ports:
-      - "3002:3002"
-    environment:
-      - FILE_UPLOAD_SIZE_LIMIT=${FILE_UPLOAD_SIZE_LIMIT:-10485760}
-      - FILE_UPLOAD_TYPES=${FILE_UPLOAD_TYPES:-image/*,application/*,text/*}
-      - STORAGE_PATH=/uploads
-    volumes:
-      - ./uploads:/uploads
-    restart: unless-stopped
-    networks:
-      - mobile-code-server-net
-    profiles:
-      - file-upload
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.file-upload.rule=Host(`upload.yourdomain.com`)"
-      - "traefik.http.routers.file-upload.entrypoints=websecure"
-      - "traefik.http.routers.file-upload.tls.certresolver=letsencrypt"
-      - "traefik.http.services.file-upload.loadbalancer.server.port=3002"
-
 # Volumes for persistent data
 volumes:
-  redis_data:
+  project-data:
+    driver: local
+  code-server-data:
+    driver: local
+  code-server-config:
     driver: local
   postgres_data:
     driver: local

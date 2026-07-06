@@ -36,6 +36,13 @@ RUN rm -f /etc/nginx/sites-enabled/default
 # Copy built React app from builder stage
 COPY --from=builder /home/coder/app/dist /var/www/html
 
+# Install backend server dependencies
+COPY server/package*.json /home/coder/server/
+RUN cd /home/coder/server && npm ci --omit=dev
+
+# Copy backend server source
+COPY server/ /home/coder/server/
+
 # Copy custom entrypoint script
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
@@ -50,6 +57,6 @@ RUN mkdir -p \
 # Expose port (Traefik will route traffic)
 EXPOSE 8080
 
-# Entrypoint runs as root to manage nginx + code-server
+# Entrypoint runs as root to manage nginx + backend + code-server
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["--bind-addr", "127.0.0.1:8081", "--auth", "none", "--disable-telemetry", "."]

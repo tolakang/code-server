@@ -4,17 +4,27 @@ A step-by-step guide to deploying Mobile Code Server on Dokploy.
 
 ## Overview
 
-This project wraps [codercom/code-server](https://github.com/coder/code-server) with a mobile-optimized React UI. The Docker container runs two services internally:
+This project wraps [codercom/code-server](https://github.com/coder/code-server) with a mobile-optimized React UI and a Node.js backend API. The Docker container runs three services internally:
 
 ```
 Internet → Dokploy Traefik → Container :8080 → nginx
-  ├── /            → React mobile wrapper (static files)
-  ├── /api/*       → proxy → 127.0.0.1:8081 (code-server)
-  └── /websocket   → proxy → 127.0.0.1:8081 (code-server)
+  ├── /                    → React app (static files)
+  ├── /api/users/*         → backend (:3000) → PostgreSQL
+  ├── /api/teams/*         → backend (:3000) → PostgreSQL
+  ├── /api/audit/*         → backend (:3000) → PostgreSQL
+  ├── /api/notifications/* → backend (:3000) → PostgreSQL
+  ├── /api/workspaces/*    → backend (:3000) → PostgreSQL
+  ├── /api/ai/*            → backend (:3000)
+  ├── /api/mcp/*           → backend (:3000)
+  ├── /api/terminal        → code-server (:8081)
+  ├── /api/files           → code-server (:8081)
+  └── /websocket/*         → code-server (:8081)
 ```
 
-- **nginx** serves the React app and reverse-proxies API/WebSocket requests to code-server
-- **code-server** runs internally on `127.0.0.1:8081`
+- **nginx** serves the React app and reverse-proxies requests to backend or code-server
+- **Backend** (Express.js) handles users, teams, audit logs, notifications, workspaces, AI, and MCP
+- **code-server** runs internally on `127.0.0.1:8081` (VS Code server)
+- **PostgreSQL** stores persistent data (users, teams, audit logs, etc.)
 - **Dokploy Traefik** handles external routing, SSL termination, and load balancing
 
 ## Prerequisites
@@ -76,11 +86,56 @@ cd mobile-code-server
 
 > **Port 8080** is the only port exposed by the container. nginx listens on this port and handles all routing internally.
 
-## Step 6: Deploy
+## Step 6: Set Up PostgreSQL Database
+
+The application requires a PostgreSQL database. You have two options:
+
+### Option A: Dokploy Managed Database (Recommended)
+
+1. In your project, go to **Databases** tab
+2. Click **Create Database**
+3. Fill in:
+   - **Database Type:** PostgreSQL
+   - **Database Name:** `mobile_code_server`
+   - **Username:** `postgres`
+   - **Password:** Generate a strong password
+4. Note the connection details (host, port, credentials)
+5. Update your environment variables (Step 7) with these credentials
+
+### Option B: External PostgreSQL
+
+If you have an existing PostgreSQL instance, note the connection details and configure them in Step 7.
+
+## Step 7: Configure Environment Variables
+
+Set these in the Dokploy project under **Environment** tab:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DB_HOST` | Yes | PostgreSQL host (e.g., `postgres` for Dokploy DB) |
+| `DB_PORT` | Yes | PostgreSQL port (default: `5432`) |
+| `DB_USER` | Yes | PostgreSQL username |
+| `DB_PASSWORD` | Yes | PostgreSQL password |
+| `DB_NAME` | Yes | PostgreSQL database name |
+| `JWT_SECRET` | Yes | Random string for JWT signing |
+| `SESSION_SECRET` | Yes | Random string for session signing |
+| `AUTH_TYPE` | No | `none` (default) or `password` |
+| `AI_PROVIDER` | No | `opencode` (default), `claude`, `gemini` |
+| `LOG_LEVEL` | No | `info` (default), `debug`, `error` |
+
+### Generate Secrets
+
+```bash
+# Generate random secrets
+openssl rand -hex 32  # Use for JWT_SECRET
+openssl rand -hex 32  # Use for SESSION_SECRET
+```
+
+## Step 8: Deploy
 
 1. Go to the **Deployments** tab
 2. Click **Deploy**
-3. Wait for the build to complete (typically 2-5 minutes)
+3. Wait for the build to complete (typically 3-5 minutes)
 4. Check the build logs for any errors
 
 ### Build Process
@@ -88,9 +143,17 @@ cd mobile-code-server
 The Docker build has two stages:
 
 1. **Builder stage** — Installs Node.js dependencies and builds the React app
-2. **Final stage** — Installs nginx, git, curl on top of `codercom/code-server:latest`, copies the React build output, and configures the entrypoint
+2. **Final stage** — Installs nginx, git, curl on top of `codercom/code-server:latest`, copies the React build output, installs backend dependencies, and configures the entrypoint
 
-## Step 7: Verify Deployment
+### What Happens on Startup
+
+1. Backend server starts and connects to PostgreSQL
+2. Database migrations run automatically (creates tables if needed)
+3. Default data is seeded (admin user, default team, default workspace)
+4. nginx starts and begins listening on port 8080
+5. code-server starts on port 8081
+
+## Step 9: Verify Deployment
 
 1. Once deployed, visit `https://code.yourdomain.com`
 2. You should see the Mobile Code Server dashboard
@@ -99,32 +162,20 @@ The Docker build has two stages:
    - Editor opens at `/editor`
    - Terminal works at `/terminal`
    - File explorer at `/explorer`
-
-## Environment Variables
-
-Set these in the Dokploy project under **Environment** tab if you need to customize behavior:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AUTH_TYPE` | `none` | Authentication type: `none`, `password`, or `github` |
-| `CODE_SERVER_AUTH` | `none` | code-server auth: `none` or `password` |
-| `CODE_SERVER_PASSWORD` | (empty) | Password for code-server (if auth enabled) |
-| `DISABLE_TELEMETRY` | `true` | Disable code-server telemetry |
-
-> **Note:** The container works out-of-the-box with no environment variables. Authentication is disabled by default for development. Enable it before using in production.
+   - Users management at `/users`
+   - Teams management at `/teams`
+   - Audit logs at `/audit-logs`
 
 ## Persistent Storage
 
-To preserve your code and settings across container restarts, configure volume mounts in Dokploy:
+The Docker Compose configuration uses named volumes for persistence:
 
-1. Go to **Volumes** tab
-2. Add these volume mappings:
-
-| Container Path | Volume Name | Purpose |
-|----------------|-------------|---------|
-| `/home/coder/project` | `project-data` | Your workspace files |
-| `/home/coder/.local/share/code-server` | `code-server-data` | Extensions and settings |
-| `/home/coder/.config/code-server` | `code-server-config` | Code-server configuration |
+| Volume | Container Path | Purpose |
+|--------|----------------|---------|
+| `project-data` | `/home/coder/project` | Your workspace files |
+| `code-server-data` | `/home/coder/.local/share/code-server` | Extensions and settings |
+| `code-server-config` | `/home/coder/.config/code-server` | Code-server configuration |
+| `postgres_data` | `/var/lib/postgresql/data` | PostgreSQL data |
 
 ## Troubleshooting
 
@@ -135,7 +186,7 @@ To preserve your code and settings across container restarts, configure volume m
 **Causes and fixes:**
 1. **Container not running** — Check the **Deployments** tab for errors
 2. **Wrong port** — Ensure your domain is configured for internal port `8080`
-3. **Entrypoint failure** — Check container logs for nginx or code-server errors
+3. **Entrypoint failure** — Check container logs for backend, nginx, or code-server errors
 
 ### Build Fails: `apt-get` Permission Error
 
@@ -149,23 +200,24 @@ To preserve your code and settings across container restarts, configure volume m
 
 **Fix:** Make sure all source files are committed. Run `git pull origin master` to get the latest.
 
+### Database Connection Error
+
+**Symptom:** Backend server fails to start with connection error
+
+**Fix:**
+1. Verify PostgreSQL is running and accessible
+2. Check `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` environment variables
+3. Ensure the database exists and the user has access
+
 ### Container Starts But No Logs
 
 **Symptom:** Deployment shows success but the site doesn't load
 
 **Fix:** Check that the entrypoint script is working:
 1. In Dokploy, go to your deployment logs
-2. Look for code-server startup messages:
-   ```
-   HTTP server listening on http://127.0.0.1:8081/
-   ```
-3. If no logs appear, the entrypoint may be failing silently. Redeploy after pulling latest changes.
-
-### nginx Not Starting
-
-**Symptom:** React app doesn't load but code-server might work directly
-
-**Fix:** Ensure the `nginx.conf` is being copied correctly. The Dockerfile copies it to `/etc/nginx/conf.d/default.conf`. Check that the build context includes the `docker/` directory.
+2. Look for backend startup messages: `Backend server running on http://127.0.0.1:3000`
+3. Look for nginx startup (no output means success)
+4. Look for code-server startup: `HTTP server listening on http://127.0.0.1:8081/`
 
 ## Updating
 
@@ -188,27 +240,44 @@ If you've configured CI/CD with GitHub Actions (see `.github/workflows/ci.yml`),
 ### Container Internals
 
 ```
-┌─────────────────────────────────────────┐
-│  Container (runs as root)               │
-│                                         │
-│  entrypoint.sh                          │
-│  ├── nginx (background, port 8080)      │
-│  │   ├── /          → React app         │
-│  │   ├── /api/*     → code-server:8081  │
-│  │   └── /websocket → code-server:8081  │
-│  │                                      │
-│  └── code-server (PID 1, port 8081)     │
-│      └── VS Code server (127.0.0.1)     │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Container (port 8080 exposed)                  │
+│                                                 │
+│  nginx (:8080)                                  │
+│  ├── /                    → React app (static)  │
+│  ├── /api/users/*         → backend (:3000)     │
+│  ├── /api/teams/*         → backend (:3000)     │
+│  ├── /api/audit/*         → backend (:3000)     │
+│  ├── /api/notifications/* → backend (:3000)     │
+│  ├── /api/workspaces/*    → backend (:3000)     │
+│  ├── /api/ai/*            → backend (:3000)     │
+│  ├── /api/mcp/*           → backend (:3000)     │
+│  ├── /api/terminal        → code-server (:8081)  │
+│  ├── /api/files           → code-server (:8081)  │
+│  └── /websocket/*         → code-server (:8081)  │
+│                                                 │
+│  backend (:3000)   — Express + PostgreSQL        │
+│  code-server (:8081) — VS Code server           │
+└─────────────────────────────────────────────────┘
 ```
 
 ### File Structure
 
 ```
 docker/
-├── Dockerfile        # Multi-stage build: React builder + code-server + nginx
-├── entrypoint.sh     # Starts nginx, then exec code-server
+├── Dockerfile        # Multi-stage build: React + backend + nginx
+├── entrypoint.sh     # Starts backend, nginx, code-server
 └── nginx.conf        # Reverse proxy config for port 8080
+
+server/
+├── package.json      # Backend dependencies (Express, Knex, pg)
+├── knexfile.js       # Database configuration
+├── migrations/       # Database schema migrations
+├── seeds/            # Default data (admin user, team)
+└── src/
+    ├── index.js      # Express app entry point
+    ├── db.js         # PostgreSQL connection
+    └── routes/       # API handlers (users, teams, audit, etc.)
 
 wrapper/app/          # React mobile wrapper source
 ├── src/
@@ -218,8 +287,20 @@ wrapper/app/          # React mobile wrapper source
 └── dist/             # Built output (copied to container)
 ```
 
+### Database Schema
+
+| Table | Purpose |
+|-------|---------|
+| `users` | User accounts (id, username, email, role, status) |
+| `teams` | Teams (id, name, description) |
+| `team_members` | Team membership (team_id, user_id) |
+| `audit_logs` | Audit trail (user_id, action, resource, details) |
+| `notifications` | User notifications (user_id, title, message, read) |
+| `workspaces` | Workspace registry (name, path, user_id) |
+
 ## Security Notes
 
-- Authentication is **disabled by default**. Set `AUTH_TYPE=password` or configure code-server authentication before exposing to the internet.
-- The container runs as root internally (required for nginx + code-server dual process). This is standard for single-purpose containers.
+- Authentication is **disabled by default**. Set `AUTH_TYPE=password` before exposing to the internet.
+- Use strong random values for `JWT_SECRET` and `SESSION_SECRET`.
 - Use HTTPS in production. Dokploy integrates with Let's Encrypt for automatic SSL certificates.
+- The container runs as root internally (required for nginx + code-server + backend triple process). This is standard for single-purpose containers.
