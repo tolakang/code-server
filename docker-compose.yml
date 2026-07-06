@@ -12,61 +12,20 @@ services:
     volumes:
       - project-data:/home/coder/project
       - code-server-data:/home/coder/.local/share/code-server
-      - code-server-config:/home/coder/.config/code-server
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
-      - HOST=0.0.0.0
-      - PORT=8080
-      - DB_HOST=${DB_HOST:-postgres}
-      - DB_PORT=5432
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
-      - DB_NAME=${DB_NAME:-mobile_code_server}
-      - AUTH_TYPE=${AUTH_TYPE:-none}
-      - JWT_SECRET=${JWT_SECRET:-change_me_to_a_random_string}
-      - SESSION_SECRET=${SESSION_SECRET:-change_me_to_a_random_string}
-      - AI_PROVIDER=${AI_PROVIDER:-opencode}
-      - MCP_SERVER_ENABLED=${MCP_SERVER_ENABLED:-true}
-      - MCP_SERVER_HOST=${MCP_SERVER_HOST:-localhost}
-      - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8082}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - mobile-code-server-net
-
-  # PostgreSQL - Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: mobile-code-server-postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
-      - POSTGRES_DB=${DB_NAME:-mobile_code_server}
+      - CODE_SERVER_ADDRESS=127.0.0.1:8081
     restart: unless-stopped
     networks:
       - mobile-code-server-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-mobile_code_server}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
 # Volumes for persistent data
 volumes:
   project-data:
     driver: local
   code-server-data:
-    driver: local
-  code-server-config:
-    driver: local
-  postgres_data:
     driver: local
 
 # Networks

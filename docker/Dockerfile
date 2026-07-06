@@ -52,23 +52,23 @@ COPY --from=backend-builder /home/coder/server/node_modules /home/coder/server/n
 # Copy backend server source
 COPY server/ /home/coder/server/
 
-# Copy custom entrypoint script
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Use code-server's ENTRYPOINTD mechanism to start nginx + backend BEFORE code-server
+# The original /usr/bin/entrypoint.sh runs scripts in $ENTRYPOINTD before launching code-server
+RUN mkdir -p /usr/local/share/code-server-startup
+COPY docker/startup.sh /usr/local/share/code-server-startup/01-start-services.sh
+RUN chmod +x /usr/local/share/code-server-startup/01-start-services.sh
 
-# Create necessary directories and config for code-server
-RUN mkdir -p \
-    $HOME/.local/share/code-server \
-    $HOME/.config/code-server \
-    $HOME/project \
-    && echo 'bind-addr: 127.0.0.1:8081' > $HOME/.config/code-server/config.yaml \
-    && echo 'auth: none' >> $HOME/.config/code-server/config.yaml \
-    && echo 'cert: false' >> $HOME/.config/code-server/config.yaml \
-    && chown -R coder:coder $HOME
+# Write code-server config: bind to 8081 (nginx on 8080)
+RUN mkdir -p $HOME/.config/code-server $HOME/.local/share/code-server $HOME/project && \
+    printf 'bind-addr: 127.0.0.1:8081\nauth: none\ncert: false\n' > $HOME/.config/code-server/config.yaml && \
+    chown -R coder:coder $HOME
+
+# EntrypointD: scripts here run before code-server starts
+ENV ENTRYPOINTD=/usr/local/share/code-server-startup
 
 # Expose port (Traefik will route traffic)
 EXPOSE 8080
 
-# Entrypoint runs as root to manage nginx + backend + code-server
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["--bind-addr", "127.0.0.1:8081", "--auth", "none", "--disable-telemetry", "."]
+# Keep the ORIGINAL code-server entrypoint, pass bind-addr via CMD
+ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+CMD ["--bind-addr", "127.0.0.1:8081", "--auth", "none", "--disable-telemetry", "/home/coder/project"]
