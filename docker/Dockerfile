@@ -26,7 +26,7 @@ FROM codercom/code-server:latest
 ENV HOME=/home/coder
 WORKDIR $HOME
 
-# Install dependencies and nginx
+# Install dependencies, nginx, and nodejs (Node 20 from NodeSource)
 USER root
 RUN mkdir -p /var/lib/apt/lists/partial && \
     apt-get update && \
@@ -35,6 +35,8 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
         curl \
         git \
         nginx \
+        && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+        && apt-get install -y --no-install-recommends nodejs \
         && rm -rf /var/lib/apt/lists/*
 
 # Copy nginx config
@@ -54,11 +56,14 @@ COPY server/ /home/coder/server/
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Create necessary directories for code-server
+# Create necessary directories and config for code-server
 RUN mkdir -p \
     $HOME/.local/share/code-server \
     $HOME/.config/code-server \
     $HOME/project \
+    && echo 'bind-addr: 127.0.0.1:8081' > $HOME/.config/code-server/config.yaml \
+    && echo 'auth: none' >> $HOME/.config/code-server/config.yaml \
+    && echo 'cert: false' >> $HOME/.config/code-server/config.yaml \
     && chown -R coder:coder $HOME
 
 # Expose port (Traefik will route traffic)
