@@ -40,7 +40,7 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
         && rm -rf /var/lib/apt/lists/*
 
 # Copy built React app from builder stage
-COPY --from=builder /home/coder/app/dist /home/coder/app/dist
+COPY --from=builder /home/coder/app/dist /home/coder/wrapper/app/dist
 
 # Copy backend dependencies from builder stage
 COPY --from=backend-builder /home/coder/server/node_modules /home/coder/server/node_modules
@@ -69,6 +69,9 @@ ENV ENTRYPOINTD=/usr/local/share/code-server-startup
 # Expose port (Traefik will route traffic)
 EXPOSE 8080
 
-# Keep the ORIGINAL code-server entrypoint
-ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+# Use a wrapper entrypoint to unset PORT before starting code-server
+COPY docker/entrypoint-wrapper.sh /usr/local/bin/entrypoint-wrapper.sh
+RUN chmod +x /usr/local/bin/entrypoint-wrapper.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-wrapper.sh"]
 CMD ["--bind-addr", "127.0.0.1:8081", "--auth", "none", "--disable-telemetry", "/home/coder/project"]
