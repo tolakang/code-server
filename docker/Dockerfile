@@ -11,6 +11,14 @@ RUN npm ci
 COPY wrapper/app/ ./app/
 RUN npm run build --prefix ./app
 
+# Builder stage for the backend
+FROM node:20 AS backend-builder
+WORKDIR /home/coder/server
+
+# Install backend dependencies
+COPY server/package*.json ./
+RUN npm ci --omit=dev
+
 # Final stage
 FROM codercom/code-server:latest
 
@@ -36,9 +44,8 @@ RUN rm -f /etc/nginx/sites-enabled/default
 # Copy built React app from builder stage
 COPY --from=builder /home/coder/app/dist /var/www/html
 
-# Install backend server dependencies
-COPY server/package*.json /home/coder/server/
-RUN cd /home/coder/server && npm ci --omit=dev
+# Copy backend dependencies from builder stage
+COPY --from=backend-builder /home/coder/server/node_modules /home/coder/server/node_modules
 
 # Copy backend server source
 COPY server/ /home/coder/server/
