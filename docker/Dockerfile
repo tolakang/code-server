@@ -18,7 +18,7 @@ FROM codercom/code-server:latest
 ENV HOME=/home/coder
 WORKDIR $HOME
 
-# Install dependencies for code-server
+# Install dependencies and nginx
 USER root
 RUN mkdir -p /var/lib/apt/lists/partial && \
     apt-get update && \
@@ -26,17 +26,19 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
         ca-certificates \
         curl \
         git \
+        nginx \
         && rm -rf /var/lib/apt/lists/*
-USER coder
+
+# Copy nginx config
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/sites-enabled/default
 
 # Copy built React app from builder stage
 COPY --from=builder /home/coder/app/dist /var/www/html
 
 # Copy custom entrypoint script
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-USER root
 RUN chmod +x /usr/local/bin/entrypoint.sh
-USER coder
 
 # Create necessary directories for code-server
 RUN mkdir -p \
@@ -48,10 +50,6 @@ RUN mkdir -p \
 # Expose port (Traefik will route traffic)
 EXPOSE 8080
 
-# Switch to coder user
-USER coder
-
-# Entrypoint and command
-# We'll start nginx and then code-server on localhost:8081
+# Entrypoint runs as root to manage nginx + code-server
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["--bind-addr", "127.0.0.1:8081", "--auth", "none", "--disable-telemetry", "."]
