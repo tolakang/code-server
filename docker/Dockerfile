@@ -19,12 +19,15 @@ ENV HOME=/home/coder
 WORKDIR $HOME
 
 # Install dependencies for code-server
-RUN apt-get update && \
+USER root
+RUN mkdir -p /var/lib/apt/lists/partial && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
         git \
         && rm -rf /var/lib/apt/lists/*
+USER coder
 
 # Copy built React app from builder stage
 COPY --from=builder /home/coder/app/dist /var/www/html
