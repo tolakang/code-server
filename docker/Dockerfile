@@ -34,7 +34,9 @@ COPY --from=builder /home/coder/app/dist /var/www/html
 
 # Copy custom entrypoint script
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+USER root
 RUN chmod +x /usr/local/bin/entrypoint.sh
+USER coder
 
 # Create necessary directories for code-server
 RUN mkdir -p \
