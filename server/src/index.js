@@ -1,8 +1,11 @@
 require('dotenv').config();
+const path = require('path');
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const httpProxy = require('http-proxy');
 const db = require('./db');
 const { authMiddleware } = require('./middleware/auth');
 
@@ -16,7 +19,17 @@ const aiRouter = require('./routes/ai');
 const mcpRouter = require('./routes/mcp');
 
 const app = express();
-const PORT = process.env.BACKEND_PORT || 3000;
+const PORT = process.env.PORT || 8080;
+const CODE_SERVER_PORT = process.env.CODE_SERVER_INTERNAL_PORT || 3000;
+const CODE_SERVER_HOST = '127.0.0.1';
+
+// WebSocket proxy for code-server
+const wsProxy = httpProxy.createProxyServer({ target: `http://${CODE_SERVER_HOST}:${CODE_SERVER_PORT}`, ws: true });
+wsProxy.on('error', (err, req, res) => {
+  console.error('WebSocket proxy error:', err.message);
+  if (res && res.writeHead) res.writeHead(502);
+  if (res && res.end) res.end('Bad Gateway');
+});
 
 // Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -39,15 +52,31 @@ app.use('/api/workspaces', workspacesRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/mcp', mcpRouter);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
+// Proxy HTTP requests to code-server (for non-API, non-static routes)
+app.use('/absproxy', (req, res) => {
+  wsProxy.web(req, res);
+});
+app.use('/proxy', (req, res) => {
+  wsProxy.web(req, res);
+});
+
+// Serve the React mobile wrapper app
+const reactAppPath = path.join(__dirname, '../../wrapper/app/dist');
+app.use(express.static(reactAppPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(reactAppPath, 'index.html'));
 });
 
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal server error' });
+});
+
+// Create HTTP server and attach WebSocket upgrade handler
+const server = http.createServer(app);
+server.on('upgrade', (req, socket, head) => {
+  wsProxy.upgrade(req, socket, head);
 });
 
 // Start server
@@ -66,8 +95,10 @@ async function start() {
       log.forEach((file) => console.log(`  - ${file}`));
     }
 
-    app.listen(PORT, '127.0.0.1', () => {
-      console.log(`Backend server running on http://127.0.0.1:${PORT}`);
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+      console.log(`React app served from ${reactAppPath}`);
+      console.log(`WebSocket proxy to code-server at ${CODE_SERVER_HOST}:${CODE_SERVER_PORT}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);

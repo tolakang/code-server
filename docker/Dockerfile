@@ -26,7 +26,8 @@ FROM codercom/code-server:latest
 ENV HOME=/home/coder
 WORKDIR $HOME
 
-# Install dependencies, nginx, and nodejs (Node 20 from NodeSource)
+# Install git and nodejs (Node 20 from NodeSource)
+# No nginx needed — Express serves everything on port 8080
 USER root
 RUN mkdir -p /var/lib/apt/lists/partial && \
     apt-get update && \
@@ -34,17 +35,12 @@ RUN mkdir -p /var/lib/apt/lists/partial && \
         ca-certificates \
         curl \
         git \
-        nginx \
         && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
         && apt-get install -y --no-install-recommends nodejs \
         && rm -rf /var/lib/apt/lists/*
 
-# Copy nginx config
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-RUN rm -f /etc/nginx/sites-enabled/default
-
 # Copy built React app from builder stage
-COPY --from=builder /home/coder/app/dist /var/www/html
+COPY --from=builder /home/coder/app/dist /home/coder/app/dist
 
 # Copy backend dependencies from builder stage
 COPY --from=backend-builder /home/coder/server/node_modules /home/coder/server/node_modules
@@ -52,23 +48,21 @@ COPY --from=backend-builder /home/coder/server/node_modules /home/coder/server/n
 # Copy backend server source
 COPY server/ /home/coder/server/
 
-# Use code-server's ENTRYPOINTD mechanism to start nginx + backend BEFORE code-server
-# The original /usr/bin/entrypoint.sh runs scripts in $ENTRYPOINTD before launching code-server
+# Write code-server config: bind to port 3000 (internal only, Express proxies on 8080)
+RUN mkdir -p $HOME/.config/code-server $HOME/.local/share/code-server $HOME/project && \
+    printf 'bind-addr: 127.0.0.1:3000\nauth: none\ncert: false\n' > $HOME/.config/code-server/config.yaml && \
+    chown -R coder:coder $HOME
+
+# Use code-server's ENTRYPOINTD to start the Express backend BEFORE code-server
 RUN mkdir -p /usr/local/share/code-server-startup
 COPY docker/startup.sh /usr/local/share/code-server-startup/01-start-services.sh
 RUN chmod +x /usr/local/share/code-server-startup/01-start-services.sh
 
-# Write code-server config: bind to 8081 (nginx on 8080)
-RUN mkdir -p $HOME/.config/code-server $HOME/.local/share/code-server $HOME/project && \
-    printf 'bind-addr: 127.0.0.1:8081\nauth: none\ncert: false\n' > $HOME/.config/code-server/config.yaml && \
-    chown -R coder:coder $HOME
-
-# EntrypointD: scripts here run before code-server starts
 ENV ENTRYPOINTD=/usr/local/share/code-server-startup
 
 # Expose port (Traefik will route traffic)
 EXPOSE 8080
 
-# Keep the ORIGINAL code-server entrypoint, pass bind-addr via CMD
+# Keep the ORIGINAL code-server entrypoint
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]
-CMD ["--bind-addr", "127.0.0.1:8081", "--auth", "none", "--disable-telemetry", "/home/coder/project"]
+CMD ["--bind-addr", "127.0.0.1:3000", "--auth", "none", "--disable-telemetry", "/home/coder/project"]
