@@ -48,10 +48,16 @@ COPY --from=backend-builder /home/coder/server/node_modules /home/coder/server/n
 # Copy backend server source
 COPY server/ /home/coder/server/
 
-# Write code-server config: bind to port 3000 (internal only, Express proxies on 8080)
+# Write code-server config: bind to port 8081 (internal only, Express proxies on 8080)
+# NOTE: code-server ignores --bind-addr CLI flag in Docker. The config file is
+# the only way to change the port, but it may also be ignored. So we also set
+# CODE_SERVER_PORT env var as a fallback.
 RUN mkdir -p $HOME/.config/code-server $HOME/.local/share/code-server $HOME/project && \
-    printf 'bind-addr: 127.0.0.1:3000\nauth: none\ncert: false\n' > $HOME/.config/code-server/config.yaml && \
+    printf 'bind-addr: 127.0.0.1:8081\nauth: none\ncert: false\n' > $HOME/.config/code-server/config.yaml && \
     chown -R coder:coder $HOME
+
+# Force code-server to use port 8081 via XDG_CONFIG_HOME
+ENV XDG_CONFIG_HOME=/home/coder/.config
 
 # Use code-server's ENTRYPOINTD to start the Express backend BEFORE code-server
 RUN mkdir -p /usr/local/share/code-server-startup
@@ -65,4 +71,4 @@ EXPOSE 8080
 
 # Keep the ORIGINAL code-server entrypoint
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]
-CMD ["--bind-addr", "127.0.0.1:3000", "--auth", "none", "--disable-telemetry", "/home/coder/project"]
+CMD ["--bind-addr", "127.0.0.1:8081", "--auth", "none", "--disable-telemetry", "/home/coder/project"]

@@ -16,13 +16,13 @@ Internet → Dokploy Traefik → Container :8080 → Express backend
   ├── /api/workspaces/*    → API routes → PostgreSQL
   ├── /api/ai/*            → API routes
   ├── /api/mcp/*           → API routes
-  ├── /absproxy/*          → WebSocket proxy → code-server (:3000)
-  ├── /proxy/*             → WebSocket proxy → code-server (:3000)
-  └── /websocket/*         → WebSocket proxy → code-server (:3000)
+  ├── /absproxy/*          → WebSocket proxy → code-server (:8081)
+  ├── /proxy/*             → WebSocket proxy → code-server (:8081)
+  └── /websocket/*         → WebSocket proxy → code-server (:8081)
 ```
 
 - **Express backend** serves the React app (static files), handles all API routes, and proxies WebSocket connections to code-server — all on port 8080
-- **code-server** runs internally on `127.0.0.1:3000` (VS Code server, not directly exposed)
+- **code-server** runs internally on `127.0.0.1:8081` (VS Code server, not directly exposed)
 - **PostgreSQL** stores persistent data (users, teams, audit logs, etc.)
 - **Dokploy Traefik** handles external routing, SSL termination, and load balancing
 
@@ -166,7 +166,7 @@ The Docker build has two stages:
 2. Express backend starts and connects to PostgreSQL
 3. Database migrations run automatically (creates tables if needed)
 4. Express listens on port 8080 (serves React app + API + WebSocket proxy)
-5. code-server starts on port 3000 (internal, accessed via Express WebSocket proxy)
+5. code-server starts on port 8081 (internal, accessed via Express WebSocket proxy)
 
 ## Step 9: Verify Deployment
 
@@ -237,9 +237,9 @@ The Docker Compose configuration uses named volumes for persistence:
 
 **Symptom:** React app loads but editor/terminal don't work
 
-**Fix:** code-server runs on port 3000 internally. Verify:
+**Fix:** code-server runs on port 8081 internally. Verify:
 1. Startup logs show code-server starting
-2. `--bind-addr 127.0.0.1:3000` is in the CMD args
+2. `--bind-addr 127.0.0.1:8081` is in the CMD args
 3. Express WebSocket proxy is working (check for proxy errors in logs)
 
 ## Updating
@@ -279,7 +279,7 @@ If you've configured CI/CD with GitHub Actions (see `.github/workflows/ci.yml`),
 │  ├── /proxy/*             → WebSocket → code-server     │
 │  └── /websocket/*         → WebSocket → code-server     │
 │                                                         │
-│  code-server (:3000) — VS Code server (internal only)   │
+│  code-server (:8081) — VS Code server (internal only)   │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -323,4 +323,4 @@ wrapper/app/          # React mobile wrapper source
 - Authentication is **disabled by default**. Set `AUTH_TYPE=password` before exposing to the internet.
 - Use strong random values for `JWT_SECRET` and `SESSION_SECRET`.
 - Use HTTPS in production. Dokploy integrates with Let's Encrypt for automatic SSL certificates.
-- code-server runs internally on port 3000 and is not directly accessible from the internet.
+- code-server runs internally on port 8081 and is not directly accessible from the internet.

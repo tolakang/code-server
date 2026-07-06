@@ -20,7 +20,7 @@ const mcpRouter = require('./routes/mcp');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-const CODE_SERVER_PORT = process.env.CODE_SERVER_INTERNAL_PORT || 3000;
+const CODE_SERVER_PORT = process.env.CODE_SERVER_INTERNAL_PORT || 8081;
 const CODE_SERVER_HOST = '127.0.0.1';
 
 // WebSocket proxy for code-server
