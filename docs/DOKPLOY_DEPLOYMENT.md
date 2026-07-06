@@ -4,26 +4,25 @@ A step-by-step guide to deploying Mobile Code Server on Dokploy.
 
 ## Overview
 
-This project wraps [codercom/code-server](https://github.com/coder/code-server) with a mobile-optimized React UI and a Node.js backend API. The Docker container runs three services internally:
+This project wraps [codercom/code-server](https://github.com/coder/code-server) with a mobile-optimized React UI and a Node.js backend API. The Docker container runs two services internally:
 
 ```
-Internet → Dokploy Traefik → Container :8080 → nginx
+Internet → Dokploy Traefik → Container :8080 → Express backend
   ├── /                    → React app (static files)
-  ├── /api/users/*         → backend (:3000) → PostgreSQL
-  ├── /api/teams/*         → backend (:3000) → PostgreSQL
-  ├── /api/audit/*         → backend (:3000) → PostgreSQL
-  ├── /api/notifications/* → backend (:3000) → PostgreSQL
-  ├── /api/workspaces/*    → backend (:3000) → PostgreSQL
-  ├── /api/ai/*            → backend (:3000)
-  ├── /api/mcp/*           → backend (:3000)
-  ├── /api/terminal        → code-server (:8081)
-  ├── /api/files           → code-server (:8081)
-  └── /websocket/*         → code-server (:8081)
+  ├── /api/users/*         → API routes → PostgreSQL
+  ├── /api/teams/*         → API routes → PostgreSQL
+  ├── /api/audit/*         → API routes → PostgreSQL
+  ├── /api/notifications/* → API routes → PostgreSQL
+  ├── /api/workspaces/*    → API routes → PostgreSQL
+  ├── /api/ai/*            → API routes
+  ├── /api/mcp/*           → API routes
+  ├── /absproxy/*          → WebSocket proxy → code-server (:3000)
+  ├── /proxy/*             → WebSocket proxy → code-server (:3000)
+  └── /websocket/*         → WebSocket proxy → code-server (:3000)
 ```
 
-- **nginx** serves the React app and reverse-proxies requests to backend or code-server
-- **Backend** (Express.js) handles users, teams, audit logs, notifications, workspaces, AI, and MCP
-- **code-server** runs internally on `127.0.0.1:8081` (VS Code server)
+- **Express backend** serves the React app (static files), handles all API routes, and proxies WebSocket connections to code-server — all on port 8080
+- **code-server** runs internally on `127.0.0.1:3000` (VS Code server, not directly exposed)
 - **PostgreSQL** stores persistent data (users, teams, audit logs, etc.)
 - **Dokploy Traefik** handles external routing, SSL termination, and load balancing
 
@@ -84,7 +83,7 @@ cd mobile-code-server
    - **Certificate Resolver:** `letsencrypt` (if configured in Dokploy)
 4. Click **Save**
 
-> **Port 8080** is the only port exposed by the container. nginx listens on this port and handles all routing internally.
+> **Port 8080** is the only port exposed by the container. Express handles everything on this port.
 
 ## Step 6: Set Up PostgreSQL Database
 
@@ -99,8 +98,8 @@ The application requires a PostgreSQL database. You have two options:
    - **Database Name:** `mobile_code_server`
    - **Username:** `postgres`
    - **Password:** Generate a strong password
-4. Note the connection details (host, port, credentials)
-5. Update your environment variables (Step 7) with these credentials
+4. Note the **Internal Host** and **Internal Connection URL** shown in the connection settings
+5. Use the connection URL in Step 7
 
 ### Option B: External PostgreSQL
 
@@ -108,25 +107,41 @@ If you have an existing PostgreSQL instance, note the connection details and con
 
 ## Step 7: Configure Environment Variables
 
-Set these in the Dokploy project under **Environment** tab:
+Set these in the Dokploy project under **Settings → Environment** tab:
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DB_HOST` | Yes | PostgreSQL host (e.g., `postgres` for Dokploy DB) |
-| `DB_PORT` | Yes | PostgreSQL port (default: `5432`) |
-| `DB_USER` | Yes | PostgreSQL username |
-| `DB_PASSWORD` | Yes | PostgreSQL password |
-| `DB_NAME` | Yes | PostgreSQL database name |
-| `JWT_SECRET` | Yes | Random string for JWT signing |
-| `SESSION_SECRET` | Yes | Random string for session signing |
-| `AUTH_TYPE` | No | `none` (default) or `password` |
-| `AI_PROVIDER` | No | `opencode` (default), `claude`, `gemini` |
-| `LOG_LEVEL` | No | `info` (default), `debug`, `error` |
+### Database (use one method)
+
+**Method 1: DATABASE_URL (recommended for Dokploy managed DB)**
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Full connection URL from Dokploy (e.g., `postgresql://postgres:password@host:5432/mobile_code_server`) |
+
+**Method 2: Individual variables**
+
+| Variable | Value |
+|----------|-------|
+| `DB_HOST` | Internal host from Dokploy database settings |
+| `DB_PORT` | `5432` |
+| `DB_USER` | `postgres` |
+| `DB_PASSWORD` | Your database password |
+| `DB_NAME` | `mobile_code_server` |
+
+### Application
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | `8080` | Express server port (must match Dokploy internal port) |
+| `NODE_ENV` | No | `production` | Node environment |
+| `AUTH_TYPE` | No | `none` | `none` or `password` |
+| `JWT_SECRET` | Yes | — | Random string for JWT signing |
+| `SESSION_SECRET` | Yes | — | Random string for session signing |
+| `AI_PROVIDER` | No | `opencode` | `opencode`, `claude`, `gemini` |
+| `LOG_LEVEL` | No | `info` | `info`, `debug`, `error` |
 
 ### Generate Secrets
 
 ```bash
-# Generate random secrets
 openssl rand -hex 32  # Use for JWT_SECRET
 openssl rand -hex 32  # Use for SESSION_SECRET
 ```
@@ -143,15 +158,15 @@ openssl rand -hex 32  # Use for SESSION_SECRET
 The Docker build has two stages:
 
 1. **Builder stage** — Installs Node.js dependencies and builds the React app
-2. **Final stage** — Installs nginx, git, curl on top of `codercom/code-server:latest`, copies the React build output, installs backend dependencies, and configures the entrypoint
+2. **Final stage** — Installs git, curl, and Node.js on top of `codercom/code-server:latest`, copies the React build output, installs backend dependencies, and configures the entrypoint
 
 ### What Happens on Startup
 
-1. Backend server starts and connects to PostgreSQL
-2. Database migrations run automatically (creates tables if needed)
-3. Default data is seeded (admin user, default team, default workspace)
-4. nginx starts and begins listening on port 8080
-5. code-server starts on port 8081
+1. code-server's ENTRYPOINTD mechanism runs the startup script
+2. Express backend starts and connects to PostgreSQL
+3. Database migrations run automatically (creates tables if needed)
+4. Express listens on port 8080 (serves React app + API + WebSocket proxy)
+5. code-server starts on port 3000 (internal, accessed via Express WebSocket proxy)
 
 ## Step 9: Verify Deployment
 
@@ -174,8 +189,6 @@ The Docker Compose configuration uses named volumes for persistence:
 |--------|----------------|---------|
 | `project-data` | `/home/coder/project` | Your workspace files |
 | `code-server-data` | `/home/coder/.local/share/code-server` | Extensions and settings |
-| `code-server-config` | `/home/coder/.config/code-server` | Code-server configuration |
-| `postgres_data` | `/var/lib/postgresql/data` | PostgreSQL data |
 
 ## Troubleshooting
 
@@ -186,7 +199,7 @@ The Docker Compose configuration uses named volumes for persistence:
 **Causes and fixes:**
 1. **Container not running** — Check the **Deployments** tab for errors
 2. **Wrong port** — Ensure your domain is configured for internal port `8080`
-3. **Entrypoint failure** — Check container logs for backend, nginx, or code-server errors
+3. **Backend startup failure** — Check container logs for Express or code-server errors
 
 ### Build Fails: `apt-get` Permission Error
 
@@ -206,18 +219,28 @@ The Docker Compose configuration uses named volumes for persistence:
 
 **Fix:**
 1. Verify PostgreSQL is running and accessible
-2. Check `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` environment variables
+2. Check `DATABASE_URL` or `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` environment variables
 3. Ensure the database exists and the user has access
+4. For Dokploy managed databases, use the **Internal Host** (not External)
 
 ### Container Starts But No Logs
 
 **Symptom:** Deployment shows success but the site doesn't load
 
-**Fix:** Check that the entrypoint script is working:
+**Fix:** Check that the startup script is working:
 1. In Dokploy, go to your deployment logs
-2. Look for backend startup messages: `Backend server running on http://127.0.0.1:3000`
-3. Look for nginx startup (no output means success)
-4. Look for code-server startup: `HTTP server listening on http://127.0.0.1:8081/`
+2. Look for: `Express backend ready on port 8080`
+3. Look for: `Server running on http://0.0.0.0:8080`
+4. If backend fails, check database connection
+
+### code-server Not Accessible
+
+**Symptom:** React app loads but editor/terminal don't work
+
+**Fix:** code-server runs on port 3000 internally. Verify:
+1. Startup logs show code-server starting
+2. `--bind-addr 127.0.0.1:3000` is in the CMD args
+3. Express WebSocket proxy is working (check for proxy errors in logs)
 
 ## Updating
 
@@ -240,42 +263,39 @@ If you've configured CI/CD with GitHub Actions (see `.github/workflows/ci.yml`),
 ### Container Internals
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Container (port 8080 exposed)                  │
-│                                                 │
-│  nginx (:8080)                                  │
-│  ├── /                    → React app (static)  │
-│  ├── /api/users/*         → backend (:3000)     │
-│  ├── /api/teams/*         → backend (:3000)     │
-│  ├── /api/audit/*         → backend (:3000)     │
-│  ├── /api/notifications/* → backend (:3000)     │
-│  ├── /api/workspaces/*    → backend (:3000)     │
-│  ├── /api/ai/*            → backend (:3000)     │
-│  ├── /api/mcp/*           → backend (:3000)     │
-│  ├── /api/terminal        → code-server (:8081)  │
-│  ├── /api/files           → code-server (:8081)  │
-│  └── /websocket/*         → code-server (:8081)  │
-│                                                 │
-│  backend (:3000)   — Express + PostgreSQL        │
-│  code-server (:8081) — VS Code server           │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  Container (port 8080 exposed)                          │
+│                                                         │
+│  Express backend (:8080)                                │
+│  ├── /                    → React app (static files)    │
+│  ├── /api/users/*         → API routes → PostgreSQL     │
+│  ├── /api/teams/*         → API routes → PostgreSQL     │
+│  ├── /api/audit/*         → API routes → PostgreSQL     │
+│  ├── /api/notifications/* → API routes → PostgreSQL     │
+│  ├── /api/workspaces/*    → API routes → PostgreSQL     │
+│  ├── /api/ai/*            → API routes                  │
+│  ├── /api/mcp/*           → API routes                  │
+│  ├── /absproxy/*          → WebSocket → code-server     │
+│  ├── /proxy/*             → WebSocket → code-server     │
+│  └── /websocket/*         → WebSocket → code-server     │
+│                                                         │
+│  code-server (:3000) — VS Code server (internal only)   │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### File Structure
 
 ```
 docker/
-├── Dockerfile        # Multi-stage build: React + backend + nginx
-├── entrypoint.sh     # Starts backend, nginx, code-server
-└── nginx.conf        # Reverse proxy config for port 8080
+├── Dockerfile        # Multi-stage build: React + backend + code-server
+└── startup.sh        # ENTRYPOINTD: starts Express backend before code-server
 
 server/
-├── package.json      # Backend dependencies (Express, Knex, pg)
-├── knexfile.js       # Database configuration
+├── package.json      # Backend dependencies (Express, Knex, pg, http-proxy)
+├── knexfile.js       # Database configuration (supports DATABASE_URL)
 ├── migrations/       # Database schema migrations
-├── seeds/            # Default data (admin user, team)
 └── src/
-    ├── index.js      # Express app entry point
+    ├── index.js      # Express app (serves React, API, WebSocket proxy)
     ├── db.js         # PostgreSQL connection
     └── routes/       # API handlers (users, teams, audit, etc.)
 
@@ -303,4 +323,4 @@ wrapper/app/          # React mobile wrapper source
 - Authentication is **disabled by default**. Set `AUTH_TYPE=password` before exposing to the internet.
 - Use strong random values for `JWT_SECRET` and `SESSION_SECRET`.
 - Use HTTPS in production. Dokploy integrates with Let's Encrypt for automatic SSL certificates.
-- The container runs as root internally (required for nginx + code-server + backend triple process). This is standard for single-purpose containers.
+- code-server runs internally on port 3000 and is not directly accessible from the internet.
