@@ -6,6 +6,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 const FileBrowser = () => {
   const [files, setFiles] = useState([]);
   const [currentPath, setCurrentPath] = useState('/');
+  const { isMobile } = useMobile();
 
   useEffect(() => {
     const fetchFiles = async () => {
@@ -46,10 +47,15 @@ const FileBrowser = () => {
 
   return (
     <Box sx={{ height: '100%', width: '100%', overflow: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', padding: '8px', backgroundColor: '#f5f5f5' }}>
-        <Typography variant="h6">File Browser</Typography>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        padding: isMobile ? '4px 8px' : '8px', 
+        backgroundColor: '#f5f5f5'
+      }}>
+        <Typography variant="h6" sx={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>File Browser</Typography>
         {currentPath !== '/' && (
-          <IconButton onClick={handleBack} sx={{ marginLeft: 'auto' }}>
+          <IconButton onClick={handleBack} sx={{ marginLeft: 'auto', padding: isMobile ? '4px' : '8px' }}>
             <FolderIcon />
           </IconButton>
         )}

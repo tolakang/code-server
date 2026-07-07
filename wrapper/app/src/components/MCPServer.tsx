@@ -44,7 +44,14 @@ const MCPServer = () => {
       </IconButton>
 
       {isOpen && (
-        <Dialog open={isOpen} onClose={toggleMCPServer} fullWidth maxWidth="sm">
+        <Dialog open={isOpen} onClose={toggleMCPServer} fullWidth maxWidth={isMobile ? 'xs' : 'sm'} sx={{ 
+        '& .MuiDialog-paper': {
+          '@media (max-width: 600px)': {
+            margin: 8,
+            width: 'calc(100% - 16px)',
+          }
+        }
+      }}>
           <DialogTitle>MCP Server Configuration</DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary" gutterBottom>

@@ -8,6 +8,7 @@ const TerminalComponent = () => {
   const terminalRef = useRef(null);
   const terminal = useRef(null);
   const fitAddon = useRef(new FitAddon());
+  const { isMobile } = useMobile();
 
   useEffect(() => {
     // Initialize terminal
@@ -63,9 +64,29 @@ const TerminalComponent = () => {
   }, []);
 
   return (
-    <Box sx={{ height: '100%', width: '100%', backgroundColor: '#000', color: '#0f0' }}>
-      <Typography variant="h6" sx={{ padding: '8px', backgroundColor: '#333' }}>Terminal</Typography>
-      <Box ref={terminalRef} sx={{ height: 'calc(100% - 56px)', overflow: 'auto' }} />
+    <Box sx={{ 
+      height: '100%', 
+      width: '100%', 
+      backgroundColor: '#000', 
+      color: '#0f0',
+      display: 'flex',
+      flexDirection: 'column',
+      '@media (max-width: 600px)': {
+        height: isMobile ? 'calc(100vh - 50px)' : '100%',
+      }
+    }}>
+      <Typography variant="h6" sx={{ 
+        padding: '8px', 
+        backgroundColor: '#333',
+        fontSize: isMobile ? '0.875rem' : '1rem'
+      }}>
+        Terminal
+      </Typography>
+      <Box ref={terminalRef} sx={{ 
+        height: isMobile ? 'calc(100vh - 100px)' : 'calc(100% - 56px)', 
+        overflow: 'auto',
+        flex: 1
+      }} />
     </Box>
   );
 };

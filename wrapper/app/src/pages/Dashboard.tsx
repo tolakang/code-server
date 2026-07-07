@@ -50,7 +50,12 @@ const WorkspaceManager = () => {
         Workspace Manager
       </Typography>
 
-      <Button variant="contained" onClick={handleCreateWorkspace} sx={{ mb: 2 }}>
+      <Button variant="contained" onClick={handleCreateWorkspace} sx={{ mb: 2, 
+        '@media (max-width: 600px)': {
+          fontSize: '0.875rem',
+          padding: '6px 12px',
+        }
+      }}>
         Create New Workspace
       </Button>
 

@@ -108,7 +108,14 @@ const Notifications = () => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         marginThreshold={8}
-        PaperProps={{ sx: { width: { xs: 'calc(100vw - 16px)', sm: 350 }, maxWidth: 400, mt: 1 } }}
+        PaperProps={{ sx: { 
+          width: { xs: 'calc(100vw - 16px)', sm: 350 },
+          maxWidth: 400,
+          mt: 1,
+          '@media (max-width: 600px)': {
+            maxWidth: 'calc(100vw - 32px)',
+          }
+        } }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid #e0e0e0' }}>
           <Typography variant="h6">Notifications</Typography>

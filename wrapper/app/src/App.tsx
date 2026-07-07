@@ -30,14 +30,27 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const activeNav = navItems.find(n => n.path === location.pathname)?.value || false;
+  const { isMobile } = useMobile();
 
   return (
     <>
       <AIAssistant />
       <MCPServer />
       <Notifications />
-      <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-        <Box flex={1} overflow="auto">
+      <Box sx={{ 
+        minHeight: '100dvh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        '@media (max-width: 600px)': {
+          minHeight: '100vh',
+        }
+      }}>
+        <Box flex={1} overflow="auto" sx={{ 
+          '@media (max-width: 600px)': {
+            overflow: 'auto',
+            WebkitOverflowScrolling: 'touch',
+          }
+        }}>
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -58,6 +71,13 @@ function App() {
             if (item) navigate(item.path, { replace: true });
           }}
           aria-label="bottom navigation"
+          sx={{ 
+            '@media (max-width: 600px)': {
+              '& .MuiBottomNavigationAction-label': {
+                fontSize: '0.5rem',
+              },
+            }
+          }}
         >
           {navItems.map(item => (
             <BottomNavigationAction key={item.value} label={item.label} icon={item.icon} value={item.value} />

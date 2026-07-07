@@ -69,7 +69,22 @@ const AIAssistant = () => {
       </IconButton>
 
       {isOpen && (
-        <Box sx={{ position: 'fixed', bottom: 80, right: { xs: 8, sm: 20 }, left: { xs: 8, sm: 'auto' }, width: { xs: 'calc(100vw - 16px)', sm: 350 }, maxWidth: 400, zIndex: 1001, backgroundColor: 'background.paper', borderRadius: 2, boxShadow: 3, p: 2 }}>
+        <Box sx={{ 
+          position: 'fixed', 
+          bottom: { xs: 70, sm: 80 },
+          right: { xs: 8, sm: 20 },
+          left: { xs: 8, sm: 'auto' },
+          width: { xs: 'calc(100vw - 16px)', sm: 350 },
+          maxWidth: 400,
+          zIndex: 1001,
+          backgroundColor: 'background.paper',
+          borderRadius: 2,
+          boxShadow: 3,
+          p: { xs: 1, sm: 2 },
+          '@media (max-width: 600px)': {
+            maxHeight: 'calc(100vh - 120px)',
+          }
+        }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">AI Assistant</Typography>
             <IconButton onClick={toggleAssistant}>
