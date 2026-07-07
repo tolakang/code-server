@@ -6,6 +6,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import FolderIcon from '@mui/icons-material/Folder';
 import GroupIcon from '@mui/icons-material/Group';
+import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Editor from './pages/Editor';
 import Terminal from './pages/Terminal';
@@ -38,6 +39,7 @@ function App() {
       <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
         <Box flex={1} overflow="auto">
           <Routes>
+            <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/editor" element={<Editor />} />
             <Route path="/terminal" element={<Terminal />} />

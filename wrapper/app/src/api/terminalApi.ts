@@ -9,7 +9,8 @@ let terminalInstance: Terminal | null = null;
  * @param onData - Callback for terminal input
  */
 export const connectTerminal = (terminal: Terminal, onData?: (data: string) => void) => {
-  const socketUrl = `ws://${window.location.host}/api/terminal`;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const socketUrl = `${protocol}//${window.location.host}/api/terminal`;
   terminalSocket = new WebSocket(socketUrl);
 
   terminalInstance = terminal;

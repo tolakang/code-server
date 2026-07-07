@@ -14,7 +14,12 @@ export interface Team {
 export const getTeams = async (): Promise<Team[]> => {
   try {
     const response = await axios.get(`${TEAM_API_BASE_URL}`);
-    return response.data;
+    return (response.data || []).map((team: any) => ({
+      ...team,
+      members: Array.isArray(team.members)
+        ? team.members.map((m: any) => (typeof m === 'string' ? m : (m as any).userId || (m as any).user_id))
+        : [],
+    }));
   } catch (error) {
     console.error('Error fetching teams:', error);
     throw error;

@@ -34,8 +34,8 @@ router.get('/summary', async (req, res) => {
   try {
     const total = await db('audit_logs').count('* as count').first();
     const today = await db('audit_logs')
-      .where('created_at', '>=', db.fn.now())
-      .where('created_at', '<', db.raw("now() + interval '1 day'"))
+      .where('created_at', '>=', db.raw("current_date"))
+      .where('created_at', '<', db.raw("current_date + interval '1 day'"))
       .count('* as count')
       .first();
     const byAction = await db('audit_logs')

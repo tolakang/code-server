@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, IconButton, List, ListItem, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, List, ListItem, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Checkbox } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CloseIcon from '@mui/icons-material/Close';
 import { connectToMCPServer, MCPServerConfig, MCPServerStatus } from '../api/mcpApi';
@@ -80,17 +80,16 @@ const MCPServer = () => {
               margin="normal"
             />
 
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <TextField
-                label="Enabled"
-                type="checkbox"
-                name="enabled"
-                checked={serverConfig.enabled}
-                onChange={(e) => setServerConfig(prev => ({ ...prev, enabled: e.target.checked }))}
-                InputProps={{ sx: { mr: 1 } }}
-              />
-              <Typography variant="body2">Enable MCP Server Integration</Typography>
-            </Box>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={serverConfig.enabled}
+                  onChange={(e) => setServerConfig(prev => ({ ...prev, enabled: e.target.checked }))}
+                />
+              }
+              label="Enable MCP Server Integration"
+              sx={{ mb: 2 }}
+            />
 
             <Button
               variant="contained"
