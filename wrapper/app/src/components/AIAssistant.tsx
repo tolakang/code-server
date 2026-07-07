@@ -65,7 +65,7 @@ const AIAssistant = () => {
   return (
     <Box>
       <IconButton onClick={toggleAssistant} sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000 }}>
-        <ChatBubbleIcon sx={{ fontSize: 40 }} color={isOpen ? 'primary' : 'default'} />
+        <ChatBubbleIcon sx={{ fontSize: 40 }} color={isOpen ? 'primary' : 'action'} />
       </IconButton>
 
       {isOpen && (

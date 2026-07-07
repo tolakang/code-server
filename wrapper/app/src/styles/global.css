@@ -41,3 +41,16 @@ body::-webkit-scrollbar-thumb {
 input, textarea, select {
   font-size: 16px !important;
 }
+
+/* Ensure MUI icons always have visible color */
+.MuiSvgIcon-root {
+  fill: currentColor;
+}
+.MuiSvgIcon-colorPrimary { color: #1976d2; }
+.MuiSvgIcon-colorSecondary { color: #dc004e; }
+.MuiSvgIcon-colorAction { color: rgba(0, 0, 0, 0.54); }
+.MuiSvgIcon-colorDisabled { color: rgba(0, 0, 0, 0.38); }
+.MuiSvgIcon-colorError { color: #d32f2f; }
+.MuiSvgIcon-colorInfo { color: #0288d1; }
+.MuiSvgIcon-colorSuccess { color: #2e7d32; }
+.MuiSvgIcon-colorWarning { color: #ed6c02; }
