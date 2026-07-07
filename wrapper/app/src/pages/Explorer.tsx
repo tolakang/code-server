@@ -8,14 +8,19 @@ const FileBrowser = () => {
   const [currentPath, setCurrentPath] = useState('/');
 
   useEffect(() => {
-    // Fetch files from code-server API
     const fetchFiles = async () => {
       try {
         const response = await fetch(`/api/files?path=${encodeURIComponent(currentPath)}`);
+        if (!response.ok) {
+          console.error('Error fetching files:', response.statusText);
+          setFiles([]);
+          return;
+        }
         const data = await response.json();
-        setFiles(data);
+        setFiles(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching files:', error);
+        setFiles([]);
       }
     };
 
