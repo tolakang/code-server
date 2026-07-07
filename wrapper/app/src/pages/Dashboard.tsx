@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Button, List, ListItem, ListItemText, Divider } from '@mui/material';
+import { Box, Typography, Button, List, ListItemButton, ListItemText, Divider } from '@mui/material';
 
 const WorkspaceManager = () => {
   const [workspaces, setWorkspaces] = React.useState([
@@ -35,9 +35,9 @@ const WorkspaceManager = () => {
 
       <List>
         {workspaces.map((workspace) => (
-          <ListItem button key={workspace.id} onClick={() => handleWorkspaceClick(workspace)}>
+          <ListItemButton key={workspace.id} onClick={() => handleWorkspaceClick(workspace)}>
             <ListItemText primary={workspace.name} secondary={workspace.path} />
-          </ListItem>
+          </ListItemButton>
         ))}
       </List>
     </Box>

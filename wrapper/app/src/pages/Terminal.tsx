@@ -28,7 +28,8 @@ const TerminalComponent = () => {
     terminal.current.write('Welcome to Mobile Code Server Terminal\r\n');
 
     // Connect to code-server terminal API
-    const socket = new WebSocket(`ws://${window.location.host}/api/terminal`);
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(`${protocol}//${window.location.host}/api/terminal`);
 
     socket.onopen = () => {
       terminal.current.write('Connected to server\r\n');

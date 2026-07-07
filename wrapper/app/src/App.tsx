@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Box, BottomNavigation, BottomNavigationAction } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import EditIcon from '@mui/icons-material/Edit';
@@ -17,15 +17,25 @@ import Notifications from './components/Notifications';
 import AuditLogs from './components/AuditLogs';
 import Users from './components/Users';
 
+const navItems = [
+  { label: 'Dashboard', value: 'dashboard', icon: <HomeIcon />, path: '/dashboard' },
+  { label: 'Editor', value: 'editor', icon: <EditIcon />, path: '/editor' },
+  { label: 'Terminal', value: 'terminal', icon: <TerminalIcon />, path: '/terminal' },
+  { label: 'Explorer', value: 'explorer', icon: <FolderIcon />, path: '/explorer' },
+  { label: 'Teams', value: 'teams', icon: <GroupIcon />, path: '/teams' },
+];
+
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const activeNav = navItems.find(n => n.path === location.pathname)?.value || false;
 
   return (
     <>
       <AIAssistant />
       <MCPServer />
       <Notifications />
-      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
         <Box flex={1} overflow="auto">
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -40,41 +50,16 @@ function App() {
         </Box>
         <BottomNavigation
           showLabels
-          value="dashboard"
+          value={activeNav}
           onChange={(e, newValue) => {
-            let path = '/dashboard';
-            switch (newValue) {
-              case 'dashboard':
-                path = '/dashboard';
-                break;
-              case 'editor':
-                path = '/editor';
-                break;
-              case 'terminal':
-                path = '/terminal';
-                break;
-              case 'explorer':
-                path = '/explorer';
-                break;
-              case 'teams':
-                path = '/teams';
-                break;
-              case 'users':
-                path = '/users';
-                break;
-              default:
-                path = '/dashboard';
-            }
-            navigate(path, { replace: true });
+            const item = navItems.find(n => n.value === newValue);
+            if (item) navigate(item.path, { replace: true });
           }}
           aria-label="bottom navigation"
         >
-          <BottomNavigationAction label="Dashboard" icon={<HomeIcon />} value="dashboard" />
-          <BottomNavigationAction label="Editor" icon={<EditIcon />} value="editor" />
-          <BottomNavigationAction label="Terminal" icon={<TerminalIcon />} value="terminal" />
-          <BottomNavigationAction label="Explorer" icon={<FolderIcon />} value="explorer" />
-          <BottomNavigationAction label="Teams" icon={<GroupIcon />} value="teams" />
-          <BottomNavigationAction label="Users" icon={<GroupIcon />} value="users" />
+          {navItems.map(item => (
+            <BottomNavigationAction key={item.value} label={item.label} icon={item.icon} value={item.value} />
+          ))}
         </BottomNavigation>
       </Box>
     </>

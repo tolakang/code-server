@@ -15,7 +15,7 @@ const Editor = () => {
           border: 'none',
           flex: 1,
         }}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
       />
     </Box>
   );
