@@ -4,18 +4,23 @@ const NOTIFICATIONS_API_BASE_URL = '/api/notifications';
 
 export interface Notification {
   id: string;
+  user_id: string;
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
-  timestamp: string;
-  isRead: boolean;
-  userId?: string;
-  teamId?: string;
+  read: boolean;
+  created_at: string;
+  updated_at?: string;
 }
 
-export const getNotifications = async (): Promise<Notification[]> => {
+export const getNotifications = async (params?: {
+  user_id?: string;
+  unread_only?: boolean;
+}): Promise<Notification[]> => {
   try {
-    const response = await axios.get(`${NOTIFICATIONS_API_BASE_URL}`);
+    const response = await axios.get(`${NOTIFICATIONS_API_BASE_URL}`, {
+      params: { ...params, unread_only: params?.unread_only ? 'true' : undefined },
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching notifications:', error);
@@ -33,19 +38,14 @@ export const getUserNotifications = async (userId: string): Promise<Notification
   }
 };
 
-export const getTeamNotifications = async (teamId: string): Promise<Notification[]> => {
+export const createNotification = async (data: {
+  user_id: string;
+  title: string;
+  message: string;
+  type: string;
+}): Promise<Notification> => {
   try {
-    const response = await axios.get(`${NOTIFICATIONS_API_BASE_URL}/team/${teamId}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching team notifications:', error);
-    throw error;
-  }
-};
-
-export const createNotification = async (notification: Omit<Notification, 'id' | 'timestamp'>): Promise<Notification> => {
-  try {
-    const response = await axios.post(`${NOTIFICATIONS_API_BASE_URL}`, notification);
+    const response = await axios.post(`${NOTIFICATIONS_API_BASE_URL}`, data);
     return response.data;
   } catch (error) {
     console.error('Error creating notification:', error);
@@ -53,40 +53,30 @@ export const createNotification = async (notification: Omit<Notification, 'id' |
   }
 };
 
-export const markAsRead = async (notificationId: string): Promise<void> => {
+export const markAsRead = async (notificationId: string): Promise<Notification> => {
   try {
-    await axios.patch(`${NOTIFICATIONS_API_BASE_URL}/${notificationId}/read`);
+    const response = await axios.patch(`${NOTIFICATIONS_API_BASE_URL}/${notificationId}/read`);
+    return response.data;
   } catch (error) {
     console.error('Error marking notification as read:', error);
     throw error;
   }
 };
 
-export const clearNotifications = async (): Promise<void> => {
+export const markAllAsRead = async (userId: string): Promise<void> => {
   try {
-    await axios.delete(`${NOTIFICATIONS_API_BASE_URL}/clear`);
+    await axios.patch(`${NOTIFICATIONS_API_BASE_URL}/read-all/${userId}`);
   } catch (error) {
-    console.error('Error clearing notifications:', error);
+    console.error('Error marking all notifications as read:', error);
     throw error;
   }
 };
 
-export const subscribeToNotifications = async (userId: string, callback: (notification: Notification) => void) => {
+export const deleteNotification = async (notificationId: string): Promise<void> => {
   try {
-    // In a real implementation, this would set up a WebSocket connection
-    // For now, we'll simulate it with a polling mechanism
-    const interval = setInterval(async () => {
-      try {
-        const notifications = await getUserNotifications(userId);
-        notifications.forEach(notification => callback(notification));
-      } catch (error) {
-        console.error('Error polling for notifications:', error);
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
+    await axios.delete(`${NOTIFICATIONS_API_BASE_URL}/${notificationId}`);
   } catch (error) {
-    console.error('Error subscribing to notifications:', error);
+    console.error('Error deleting notification:', error);
     throw error;
   }
 };

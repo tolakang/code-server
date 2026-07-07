@@ -2,19 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Button, Select, MenuItem, FormControl, InputLabel, Chip, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
-import { getAuditLogs, getAuditLogsByUser, getAuditLogsByResource, searchAuditLogs, exportAuditLogs, getAuditSummary, AuditLog } from '../api/auditApi';
+import { getAuditLogs, exportAuditLogs, getAuditSummary } from '../api/auditApi';
+
+interface AuditLog {
+  id: string;
+  user_id: string;
+  username?: string;
+  action: string;
+  resource: string;
+  details: any;
+  ip_address: string;
+  created_at: string;
+}
 
 const AuditLogs = () => {
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterValue, setFilterValue] = useState('');
-  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
   const [summary, setSummary] = useState<{
-    totalLogs: number;
-    logsByAction: Record<string, number>;
-    logsByResourceType: Record<string, number>;
+    total: number;
+    today: number;
+    byAction: { action: string; count: number }[];
+    byResource: { resource: string; count: number }[];
   } | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
@@ -22,21 +34,13 @@ const AuditLogs = () => {
     const fetchAuditLogs = async () => {
       try {
         setLoading(true);
-        let logs;
-        switch (filterType) {
-          case 'user':
-            logs = await getAuditLogsByUser(filterValue);
-            break;
-          case 'resource':
-            logs = await getAuditLogsByResource('all', filterValue);
-            break;
-          case 'search':
-            logs = await searchAuditLogs(searchQuery);
-            break;
-          default:
-            logs = await getAuditLogs();
-        }
-        setAuditLogs(logs);
+        const params: Record<string, string> = {};
+        if (filterType === 'user' && filterValue) params.user_id = filterValue;
+        if (filterType === 'resource' && filterValue) params.resource = filterValue;
+        if (searchQuery) params.action = searchQuery;
+        const result = await getAuditLogs(params);
+        setLogs(result.logs);
+        setTotal(result.total);
       } catch (error) {
         console.error('Error fetching audit logs:', error);
       } finally {
@@ -46,8 +50,8 @@ const AuditLogs = () => {
 
     const fetchSummary = async () => {
       try {
-        const summaryData = await getAuditSummary();
-        setSummary(summaryData);
+        const data = await getAuditSummary();
+        setSummary(data);
       } catch (error) {
         console.error('Error fetching audit summary:', error);
       }
@@ -68,11 +72,11 @@ const AuditLogs = () => {
 
   const handleExport = async () => {
     try {
-      const blob = await exportAuditLogs(exportFormat);
+      const blob = await exportAuditLogs();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `audit-logs.${exportFormat}`;
+      a.download = 'audit-logs.json';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -80,14 +84,6 @@ const AuditLogs = () => {
     } catch (error) {
       console.error('Error exporting audit logs:', error);
     }
-  };
-
-  const handleExportDialogOpen = () => {
-    setExportDialogOpen(true);
-  };
-
-  const handleExportDialogClose = () => {
-    setExportDialogOpen(false);
   };
 
   return (
@@ -98,12 +94,10 @@ const AuditLogs = () => {
 
       {summary && (
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-          <Chip label={`Total Logs: ${summary.totalLogs}`} color="primary" />
-          {Object.entries(summary.logsByAction).map(([action, count]) => (
-            <Chip key={action} label={`${action}: ${count}`} />
-          ))}
-          {Object.entries(summary.logsByResourceType).map(([resourceType, count]) => (
-            <Chip key={resourceType} label={`${resourceType}: ${count}`} />
+          <Chip label={`Total: ${summary.total}`} color="primary" />
+          <Chip label={`Today: ${summary.today}`} color="secondary" />
+          {summary.byAction.map((item) => (
+            <Chip key={item.action} label={`${item.action}: ${item.count}`} />
           ))}
         </Box>
       )}
@@ -111,11 +105,7 @@ const AuditLogs = () => {
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
         <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>Filter Type</InputLabel>
-          <Select
-            value={filterType}
-            label="Filter Type"
-            onChange={handleFilterChange}
-          >
+          <Select value={filterType} label="Filter Type" onChange={handleFilterChange}>
             <MenuItem value="all">All Logs</MenuItem>
             <MenuItem value="user">By User</MenuItem>
             <MenuItem value="resource">By Resource</MenuItem>
@@ -123,32 +113,16 @@ const AuditLogs = () => {
         </FormControl>
 
         {filterType === 'user' && (
-          <TextField
-            label="User ID"
-            value={filterValue}
-            onChange={(e) => setFilterValue(e.target.value)}
-            sx={{ minWidth: 200 }}
-          />
+          <TextField label="User ID" value={filterValue} onChange={(e) => setFilterValue(e.target.value)} sx={{ minWidth: 200 }} />
         )}
 
         {filterType === 'resource' && (
-          <TextField
-            label="Resource ID"
-            value={filterValue}
-            onChange={(e) => setFilterValue(e.target.value)}
-            sx={{ minWidth: 200 }}
-          />
+          <TextField label="Resource" value={filterValue} onChange={(e) => setFilterValue(e.target.value)} sx={{ minWidth: 200 }} />
         )}
 
-        <TextField
-          label="Search"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          sx={{ minWidth: 300 }}
-        />
-
+        <TextField label="Search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} sx={{ minWidth: 300 }} />
         <Button variant="contained" onClick={handleSearch} startIcon={<SearchIcon />}>Search</Button>
-        <Button variant="outlined" onClick={handleExportDialogOpen} startIcon={<DownloadIcon />}>Export</Button>
+        <Button variant="outlined" onClick={() => setExportDialogOpen(true)} startIcon={<DownloadIcon />}>Export</Button>
       </Box>
 
       {loading ? (
@@ -161,25 +135,21 @@ const AuditLogs = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Action</TableCell>
-                <TableCell>Resource Type</TableCell>
-                <TableCell>Resource ID</TableCell>
-                <TableCell>User ID</TableCell>
+                <TableCell>Resource</TableCell>
+                <TableCell>User</TableCell>
                 <TableCell>Timestamp</TableCell>
                 <TableCell>IP Address</TableCell>
-                <TableCell>User Agent</TableCell>
                 <TableCell>Details</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {auditLogs.map((log) => (
+              {logs.map((log) => (
                 <TableRow key={log.id} hover>
                   <TableCell>{log.action}</TableCell>
-                  <TableCell>{log.resourceType}</TableCell>
-                  <TableCell>{log.resourceId}</TableCell>
-                  <TableCell>{log.userId}</TableCell>
-                  <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
-                  <TableCell>{log.ipAddress}</TableCell>
-                  <TableCell>{log.userAgent}</TableCell>
+                  <TableCell>{log.resource}</TableCell>
+                  <TableCell>{log.username || log.user_id}</TableCell>
+                  <TableCell>{new Date(log.created_at).toLocaleString()}</TableCell>
+                  <TableCell>{log.ip_address}</TableCell>
                   <TableCell>{JSON.stringify(log.details)}</TableCell>
                 </TableRow>
               ))}
@@ -188,23 +158,13 @@ const AuditLogs = () => {
         </TableContainer>
       )}
 
-      <Dialog open={exportDialogOpen} onClose={handleExportDialogClose}>
+      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)}>
         <DialogTitle>Export Audit Logs</DialogTitle>
         <DialogContent>
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Format</InputLabel>
-            <Select
-              value={exportFormat}
-              label="Format"
-              onChange={(e) => setExportFormat(e.target.value as 'csv' | 'json')}
-            >
-              <MenuItem value="csv">CSV</MenuItem>
-              <MenuItem value="json">JSON</MenuItem>
-            </Select>
-          </FormControl>
+          <Typography>Export all audit logs as JSON.</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleExportDialogClose}>Cancel</Button>
+          <Button onClick={() => setExportDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleExport} variant="contained">Export</Button>
         </DialogActions>
       </Dialog>

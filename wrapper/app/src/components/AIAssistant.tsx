@@ -3,7 +3,7 @@ import { Box, Typography, TextField, Button, IconButton, List, ListItem, ListIte
 import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import SendIcon from '@mui/icons-material/Send';
 import CloseIcon from '@mui/icons-material/Close';
-import { sendToOpenCode, sendToClaude, sendToCodex, sendToGemini, sendToOpenRouter, getAvailableModels } from '../api/aiApi';
+import { sendMessage, getAvailableModels } from '../api/aiApi';
 
 const AIAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,51 +14,33 @@ const AIAssistant = () => {
   }]);
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState('opencode');
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const models = await getAvailableModels();
+        const models = await getAvailableModels(selectedModel);
         setAvailableModels(models);
       } catch (error) {
         console.error('Error fetching available models:', error);
       }
     };
     fetchModels();
-  }, []);
+  }, [selectedModel]);
 
   const toggleAssistant = () => {
     setIsOpen(!isOpen);
   };
 
-  const sendMessage = async () => {
+  const handleSend = async () => {
     if (input.trim() === '') return;
 
-    // Add user message
     setMessages(prev => [...prev, { text: input, isUser: true, model: selectedModel }]);
     setInput('');
 
     try {
-      let response;
-      switch (selectedModel) {
-        case 'opencode':
-          response = await sendToOpenCode(input);
-          break;
-        case 'claude':
-          response = await sendToClaude(input);
-          break;
-        case 'codex':
-          response = await sendToCodex(input);
-          break;
-        case 'gemini':
-          response = await sendToGemini(input);
-          break;
-        default:
-          response = await sendToOpenRouter(input, selectedModel);
-      }
+      const response = await sendMessage(selectedModel, input);
 
-      // Add AI response
       setMessages(prev => [...prev, {
         text: response.response,
         isUser: false,
@@ -76,7 +58,7 @@ const AIAssistant = () => {
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
-      sendMessage();
+      handleSend();
     }
   };
 
@@ -108,8 +90,8 @@ const AIAssistant = () => {
               <MenuItem value="claude">Claude Code</MenuItem>
               <MenuItem value="codex">Codex</MenuItem>
               <MenuItem value="gemini">Gemini</MenuItem>
-              {availableModels.filter(model => !['opencode', 'claude', 'codex', 'gemini'].includes(model)).map(model => (
-                <MenuItem key={model} value={model}>{model}</MenuItem>
+              {availableModels.filter(m => !['opencode', 'claude', 'codex', 'gemini'].includes(m.id)).map(m => (
+                <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -147,7 +129,7 @@ const AIAssistant = () => {
             />
             <Button
               variant="contained"
-              onClick={sendMessage}
+              onClick={handleSend}
               endIcon={<SendIcon />}
               sx={{ mb: 1 }}
             >

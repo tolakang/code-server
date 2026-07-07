@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, IconButton } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, ListItemButton, IconButton } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 
@@ -51,11 +51,13 @@ const FileBrowser = () => {
       </Box>
       <List>
         {files.map((file) => (
-          <ListItem button key={file.name} onClick={() => handleFileClick(file)}>
-            <ListItemIcon>
-              {file.type === 'directory' ? <FolderIcon /> : <InsertDriveFileIcon />}
-            </ListItemIcon>
-            <ListItemText primary={file.name} />
+          <ListItem key={file.name} disablePadding>
+            <ListItemButton onClick={() => handleFileClick(file)}>
+              <ListItemIcon>
+                {file.type === 'directory' ? <FolderIcon /> : <InsertDriveFileIcon />}
+              </ListItemIcon>
+              <ListItemText primary={file.name} />
+            </ListItemButton>
           </ListItem>
         ))}
       </List>

@@ -5,80 +5,42 @@ const AI_API_BASE_URL = '/api/ai';
 export interface AIResponse {
   response: string;
   model: string;
-  timestamp: string;
+  provider: string;
+  usage: { prompt_tokens: number; completion_tokens: number };
 }
 
-export const sendToOpenCode = async (prompt: string): Promise<AIResponse> => {
+export const sendMessage = async (provider: string, prompt: string, model?: string): Promise<AIResponse> => {
   try {
-    const response = await axios.post(`${AI_API_BASE_URL}/opencode`, {
+    const response = await axios.post(`${AI_API_BASE_URL}/chat`, {
+      provider,
+      model: model || 'default',
       prompt,
-      model: 'opencode'
     });
     return response.data;
   } catch (error) {
-    console.error('Error sending to OpenCode:', error);
+    console.error(`Error sending to ${provider}:`, error);
     throw error;
   }
 };
 
-export const sendToClaude = async (prompt: string): Promise<AIResponse> => {
+export const getAvailableModels = async (provider?: string): Promise<{ id: string; name: string }[]> => {
   try {
-    const response = await axios.post(`${AI_API_BASE_URL}/claude`, {
-      prompt,
-      model: 'claude'
+    const response = await axios.get(`${AI_API_BASE_URL}/models`, {
+      params: provider ? { provider } : {},
     });
     return response.data;
-  } catch (error) {
-    console.error('Error sending to Claude:', error);
-    throw error;
-  }
-};
-
-export const sendToCodex = async (prompt: string): Promise<AIResponse> => {
-  try {
-    const response = await axios.post(`${AI_API_BASE_URL}/codex`, {
-      prompt,
-      model: 'codex'
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error sending to Codex:', error);
-    throw error;
-  }
-};
-
-export const sendToGemini = async (prompt: string): Promise<AIResponse> => {
-  try {
-    const response = await axios.post(`${AI_API_BASE_URL}/gemini`, {
-      prompt,
-      model: 'gemini'
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error sending to Gemini:', error);
-    throw error;
-  }
-};
-
-export const sendToOpenRouter = async (prompt: string, model: string): Promise<AIResponse> => {
-  try {
-    const response = await axios.post(`${AI_API_BASE_URL}/openrouter`, {
-      prompt,
-      model
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error sending to OpenRouter:', error);
-    throw error;
-  }
-};
-
-export const getAvailableModels = async (): Promise<string[]> => {
-  try {
-    const response = await axios.get(`${AI_API_BASE_URL}/models`);
-    return response.data.models;
   } catch (error) {
     console.error('Error fetching available models:', error);
+    throw error;
+  }
+};
+
+export const getProviders = async (): Promise<{ id: string; name: string; configured: boolean }[]> => {
+  try {
+    const response = await axios.get(`${AI_API_BASE_URL}/providers`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching providers:', error);
     throw error;
   }
 };

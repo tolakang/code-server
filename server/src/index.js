@@ -17,6 +17,8 @@ const notificationsRouter = require('./routes/notifications');
 const workspacesRouter = require('./routes/workspaces');
 const aiRouter = require('./routes/ai');
 const mcpRouter = require('./routes/mcp');
+const filesRouter = require('./routes/files');
+const terminalHandler = require('./routes/terminal');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -51,6 +53,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/workspaces', workspacesRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/mcp', mcpRouter);
+app.use('/api', filesRouter);
 
 // Proxy HTTP requests to code-server (for non-API, non-static routes)
 app.use('/absproxy', (req, res) => {
@@ -76,7 +79,12 @@ app.use((err, req, res, next) => {
 // Create HTTP server and attach WebSocket upgrade handler
 const server = http.createServer(app);
 server.on('upgrade', (req, socket, head) => {
-  wsProxy.upgrade(req, socket, head);
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.pathname === '/api/terminal') {
+    terminalHandler.handleUpgrade(req, socket, head);
+  } else {
+    wsProxy.upgrade(req, socket, head);
+  }
 });
 
 // Start server
