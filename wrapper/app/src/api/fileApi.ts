@@ -14,17 +14,9 @@ export const fetchFiles = async (path: string) => {
   }
 };
 
-export const uploadFile = async (path: string, file: File) => {
+export const uploadFile = async (path: string, content: string) => {
   try {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('path', path);
-
-    const response = await axios.post(`${API_BASE_URL}/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    const response = await axios.post(`${API_BASE_URL}/upload`, { path, content });
     return response.data;
   } catch (error) {
     console.error('Error uploading file:', error);

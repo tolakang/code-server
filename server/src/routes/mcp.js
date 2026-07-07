@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const router = express.Router();
 
 // MCP server state
@@ -11,7 +12,10 @@ let mcpConfig = {
 // GET /api/mcp/status - Get MCP server status
 router.get('/status', (req, res) => {
   res.json({
-    connected: mcpConnected,
+    status: mcpConnected ? 'connected' : 'disconnected',
+    version: '1.0.0',
+    uptime: process.uptime().toString(),
+    connectedAgents: mcpConnected ? 1 : 0,
     config: mcpConfig,
   });
 });
@@ -24,7 +28,6 @@ router.post('/connect', async (req, res) => {
     if (port) mcpConfig.port = parseInt(port);
 
     // Try to connect to MCP server
-    const http = require('http');
     const ping = new Promise((resolve, reject) => {
       const request = http.get(
         `http://${mcpConfig.host}:${mcpConfig.port}/health`,
@@ -43,10 +46,23 @@ router.post('/connect', async (req, res) => {
 
     await ping;
     mcpConnected = true;
-    res.json({ connected: true, config: mcpConfig });
+    res.json({
+      status: 'connected',
+      version: '1.0.0',
+      uptime: process.uptime().toString(),
+      connectedAgents: 1,
+      config: mcpConfig,
+    });
   } catch (err) {
     mcpConnected = false;
-    res.json({ connected: false, error: err.message, config: mcpConfig });
+    res.json({
+      status: 'error',
+      version: '1.0.0',
+      uptime: process.uptime().toString(),
+      connectedAgents: 0,
+      error: err.message,
+      config: mcpConfig,
+    });
   }
 });
 
@@ -56,6 +72,11 @@ router.post('/disconnect', (req, res) => {
   res.json({ connected: false });
 });
 
+// GET /api/mcp/models - List available MCP models
+router.get('/models', (req, res) => {
+  res.json({ models: [] });
+});
+
 // POST /api/mcp/send - Send message to MCP server
 router.post('/send', async (req, res) => {
   if (!mcpConnected) {
@@ -63,9 +84,13 @@ router.post('/send', async (req, res) => {
   }
 
   try {
-    const { method, params } = req.body;
+    let { method, params, message } = req.body;
+    // Accept both { message } (client) and { method, params } (standard) formats
+    if (message && !method) {
+      method = 'send';
+      params = { message };
+    }
     // Proxy to MCP server
-    const http = require('http');
     const postData = JSON.stringify({ method, params });
 
     const result = await new Promise((resolve, reject) => {

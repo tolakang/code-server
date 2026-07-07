@@ -30,10 +30,22 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { name, path, user_id } = req.body;
+    if (!name || !path) return res.status(400).json({ error: 'name and path are required' });
     const [workspace] = await db('workspaces')
       .insert({ name, path, user_id })
       .returning('*');
     res.status(201).json(workspace);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/workspaces/:id/switch - Switch to workspace
+router.post('/:id/switch', async (req, res) => {
+  try {
+    const workspace = await db('workspaces').where('id', req.params.id).first();
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
+    res.json({ switched: true, workspace });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

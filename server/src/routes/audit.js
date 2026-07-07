@@ -61,13 +61,15 @@ router.get('/summary', async (req, res) => {
   }
 });
 
-// GET /api/audit/export - Export audit logs as JSON
+// GET /api/audit/export - Export audit logs as downloadable JSON
 router.get('/export', async (req, res) => {
   try {
     const logs = await db('audit_logs')
       .select('audit_logs.*', 'users.username')
       .leftJoin('users', 'audit_logs.user_id', 'users.id')
       .orderBy('created_at', 'desc');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename="audit-logs.json"');
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });

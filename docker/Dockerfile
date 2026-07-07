@@ -3,13 +3,13 @@
 
 # Builder stage for the React app
 FROM node:20 AS builder
-WORKDIR /home/coder
+WORKDIR /home/coder/app
 
 # Copy the wrapper directory (excluding node_modules)
 COPY wrapper/app/package*.json ./
 RUN npm ci
-COPY wrapper/app/ ./app/
-RUN npm run build --prefix ./app
+COPY wrapper/app/ ./
+RUN npm run build
 
 # Builder stage for the backend
 FROM node:20 AS backend-builder
@@ -20,7 +20,7 @@ COPY server/package*.json ./
 RUN npm ci --omit=dev
 
 # Final stage
-FROM codercom/code-server:latest
+FROM codercom/code-server:4.127.0
 
 # Set environment
 ENV HOME=/home/coder
