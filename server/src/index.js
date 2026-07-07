@@ -83,6 +83,9 @@ server.on('upgrade', (req, socket, head) => {
   if (url.pathname === '/api/terminal') {
     terminalHandler.handleUpgrade(req, socket, head);
   } else {
+    // Rewrite /absproxy/* and /proxy/* paths so code-server receives bare paths
+    const proxyPath = url.pathname.replace(/^\/(absproxy|proxy)/, '');
+    req.url = proxyPath + url.search;
     wsProxy.upgrade(req, socket, head);
   }
 });
