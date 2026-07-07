@@ -3,7 +3,7 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 
-const ROOT_DIR = process.env.FILES_ROOT_DIR || '/workspace';
+const ROOT_DIR = process.env.FILES_ROOT_DIR || '/home/coder';
 
 // GET /api/files?path= - List files
 router.get('/files', (req, res) => {

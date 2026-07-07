@@ -1,18 +1,23 @@
 import React from 'react';
+import { Box } from '@mui/material';
+
+const CODE_SERVER_URL = '/absproxy/?folder=/home/coder/project';
 
 const Editor = () => {
   return (
-    <div style={{ padding: '16px' }}>
-      <h1>Editor</h1>
-      <p>This is where the code editor will be embedded.</p>
-      {/* In the future, we might embed the code-server via iframe or webview */}
-      <div style={{ border: '1px solid #ccc', height: '500px', marginTop: '16px' }}>
-        {/* Placeholder for editor */}
-        <div style={{ textAlign: 'center', paddingTop: '200px', color: '#666' }}>
-          Code Editor Placeholder
-        </div>
-      </div>
-    </div>
+    <Box sx={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+      <iframe
+        src={CODE_SERVER_URL}
+        title="Code Editor"
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          flex: 1,
+        }}
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+      />
+    </Box>
   );
 };
 
