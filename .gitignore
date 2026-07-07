@@ -5,3 +5,8 @@ dist/
 !.env.example
 *.log
 .DS_Store
+.cache/
+.pc/
+lib/
+out/
+wrapper/app/dist/

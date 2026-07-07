@@ -126,7 +126,7 @@ const Users = () => {
     setUserData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (e: React.ChangeEvent<{ value: unknown }>) => {
+  const handleSelectChange = (e: any) => {
     const { name, value } = e.target;
     setUserData(prev => ({ ...prev, [name]: value }));
   };

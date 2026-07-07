@@ -63,6 +63,11 @@ app.use('/proxy', (req, res) => {
   wsProxy.web(req, res);
 });
 
+// 404 for unknown API routes (must be before static/catch-all)
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: 'API route not found' });
+});
+
 // Serve the React mobile wrapper app
 const reactAppPath = path.join(__dirname, '../../wrapper/app/dist');
 app.use(express.static(reactAppPath));

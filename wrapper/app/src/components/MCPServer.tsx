@@ -40,7 +40,7 @@ const MCPServer = () => {
   return (
     <Box>
       <IconButton onClick={toggleMCPServer} sx={{ position: 'fixed', bottom: 20, left: 20, zIndex: 1000 }}>
-        <SettingsIcon sx={{ fontSize: 40 }} color={serverConfig.enabled ? 'primary' : 'default'} />
+        <SettingsIcon sx={{ fontSize: 40 }} color={serverConfig.enabled ? 'primary' : 'action'} />
       </IconButton>
 
       {isOpen && (

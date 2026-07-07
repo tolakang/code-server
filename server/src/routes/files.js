@@ -10,7 +10,7 @@ router.get('/files', (req, res) => {
   try {
     const dirPath = req.query.path || '/';
     const safePath = path.normalize(path.join(ROOT_DIR, dirPath));
-    if (!safePath.startsWith(ROOT_DIR)) {
+    if (safePath !== ROOT_DIR && !safePath.startsWith(ROOT_DIR + '/')) {
       return res.status(403).json({ error: 'Access denied' });
     }
     const entries = fs.readdirSync(safePath, { withFileTypes: true });
@@ -33,7 +33,7 @@ router.post('/upload', (req, res) => {
     const { path: filePath } = req.body;
     if (!filePath) return res.status(400).json({ error: 'Path is required' });
     const safePath = path.normalize(path.join(ROOT_DIR, filePath));
-    if (!safePath.startsWith(ROOT_DIR)) {
+    if (safePath !== ROOT_DIR && !safePath.startsWith(ROOT_DIR + '/')) {
       return res.status(403).json({ error: 'Access denied' });
     }
     const dir = path.dirname(safePath);
@@ -53,13 +53,17 @@ router.get('/download', (req, res) => {
     const filePath = req.query.path;
     if (!filePath) return res.status(400).json({ error: 'Path is required' });
     const safePath = path.normalize(path.join(ROOT_DIR, filePath));
-    if (!safePath.startsWith(ROOT_DIR)) {
+    if (safePath !== ROOT_DIR && !safePath.startsWith(ROOT_DIR + '/')) {
       return res.status(403).json({ error: 'Access denied' });
     }
     if (!fs.existsSync(safePath)) {
       return res.status(404).json({ error: 'File not found' });
     }
-    res.download(safePath);
+    res.download(safePath, (err) => {
+      if (err && !res.headersSent) {
+        res.status(500).json({ error: 'Failed to download file' });
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -71,7 +75,7 @@ router.post('/directory', (req, res) => {
     const { path: dirPath } = req.body;
     if (!dirPath) return res.status(400).json({ error: 'Path is required' });
     const safePath = path.normalize(path.join(ROOT_DIR, dirPath));
-    if (!safePath.startsWith(ROOT_DIR)) {
+    if (safePath !== ROOT_DIR && !safePath.startsWith(ROOT_DIR + '/')) {
       return res.status(403).json({ error: 'Access denied' });
     }
     if (fs.existsSync(safePath)) {

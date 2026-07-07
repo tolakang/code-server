@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, List, ListItem, ListItemText, ListItemAvatar, Avatar, IconButton, Badge, Popover, Divider, Button } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, ListItemAvatar, Avatar, IconButton, Badge, Popover, Divider, Button, Tooltip } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoIcon from '@mui/icons-material/Info';
 import WarningIcon from '@mui/icons-material/Warning';
 import ErrorIcon from '@mui/icons-material/Error';
-import { getNotifications, markAsRead, deleteNotification } from '../api/notificationsApi';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
+import ClearIcon from '@mui/icons-material/Clear';
+import { getNotifications, markAsRead, markAllAsRead, deleteNotification } from '../api/notificationsApi';
 
 interface Notification {
   id: string;
@@ -56,10 +58,24 @@ const Notifications = () => {
     }
   };
 
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead('current');
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
   const handleDelete = async (notificationId: string) => {
     try {
       await deleteNotification(notificationId);
+      const deleted = notifications.find(n => n.id === notificationId);
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      if (deleted && !deleted.read) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -96,6 +112,11 @@ const Notifications = () => {
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid #e0e0e0' }}>
           <Typography variant="h6">Notifications</Typography>
+          {unreadCount > 0 && (
+            <Button size="small" startIcon={<DoneAllIcon />} onClick={handleMarkAllAsRead}>
+              Mark all read
+            </Button>
+          )}
         </Box>
 
         {notifications.length === 0 ? (
@@ -109,9 +130,18 @@ const Notifications = () => {
                 <ListItem
                   alignItems="flex-start"
                   secondaryAction={
-                    <IconButton edge="end" onClick={() => handleDelete(notification.id)} size="small">
-                      <CheckCircleIcon color="action" />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Tooltip title="Mark as read">
+                        <IconButton edge="end" onClick={() => handleMarkAsRead(notification.id)} size="small" disabled={notification.read}>
+                          <CheckCircleIcon color={notification.read ? 'disabled' : 'action'} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton edge="end" onClick={() => handleDelete(notification.id)} size="small">
+                          <ClearIcon color="action" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   }
                   sx={{ backgroundColor: notification.read ? 'transparent' : '#f5f5f5' }}
                 >

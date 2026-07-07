@@ -65,7 +65,7 @@ const AuditLogs = () => {
     setFilterType('search');
   };
 
-  const handleFilterChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handleFilterChange = (event: any) => {
     setFilterType(event.target.value as string);
     setFilterValue('');
   };

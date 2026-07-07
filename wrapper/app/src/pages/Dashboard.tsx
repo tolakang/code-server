@@ -1,20 +1,47 @@
-import React from 'react';
-import { Box, Typography, Button, List, ListItemButton, ListItemText, Divider } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Button, List, ListItemButton, ListItemText, Divider, CircularProgress } from '@mui/material';
+import { getWorkspaces, switchWorkspace } from '../api/workspaceApi';
+
+interface Workspace {
+  id: string;
+  name: string;
+  path: string;
+  username?: string;
+}
 
 const WorkspaceManager = () => {
-  const [workspaces, setWorkspaces] = React.useState([
-    { id: '1', name: 'Default Workspace', path: '/project' },
-    { id: '2', name: 'Mobile Development', path: '/project/mobile' },
-  ]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      try {
+        const data = await getWorkspaces();
+        setWorkspaces(data);
+      } catch (error) {
+        console.error('Error fetching workspaces:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWorkspaces();
+  }, []);
 
   const handleCreateWorkspace = () => {
-    // TODO: Implement workspace creation
     console.log('Create new workspace');
   };
 
-  const handleWorkspaceClick = (workspace) => {
-    // TODO: Switch to workspace
-    console.log('Switch to workspace:', workspace.name);
+  const handleWorkspaceClick = async (workspace: Workspace) => {
+    try {
+      setSelectedId(workspace.id);
+      await switchWorkspace(workspace.id);
+      console.log('Switched to workspace:', workspace.name);
+    } catch (error) {
+      console.error('Error switching workspace:', error);
+    } finally {
+      setSelectedId(null);
+    }
   };
 
   return (
@@ -33,13 +60,21 @@ const WorkspaceManager = () => {
         Available Workspaces
       </Typography>
 
-      <List>
-        {workspaces.map((workspace) => (
-          <ListItemButton key={workspace.id} onClick={() => handleWorkspaceClick(workspace)}>
-            <ListItemText primary={workspace.name} secondary={workspace.path} />
-          </ListItemButton>
-        ))}
-      </List>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : workspaces.length === 0 ? (
+        <Typography variant="body1" color="text.secondary">No workspaces found. Create one to get started.</Typography>
+      ) : (
+        <List>
+          {workspaces.map((workspace) => (
+            <ListItemButton key={workspace.id} onClick={() => handleWorkspaceClick(workspace)} disabled={selectedId === workspace.id}>
+              <ListItemText primary={workspace.name} secondary={workspace.path} />
+            </ListItemButton>
+          ))}
+        </List>
+      )}
     </Box>
   );
 };
